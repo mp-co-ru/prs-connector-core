@@ -1,23 +1,26 @@
 import pytest
-import json
-from uuid import UUID
 from prs_connector_core.buffer import BufferManager
-
-@pytest.fixture
-def buffer():
-    return BufferManager(UUID("550e8400-e29b-41d4-a716-446655440000"))
+from uuid import UUID
 
 @pytest.mark.asyncio
-async def test_buffer_operations(buffer):
-    test_data = {"tagId": "test", "data": 42}
+async def test_batch_buffer_operations():
+    buffer = BufferManager(UUID("550e8400-e29b-41d4-a716-446655440000"))
+    test_packet = {
+        "data": [
+            {
+                "tagId": "test1",
+                "data": [{"x": 123, "y": 42, "q": None}]
+            }
+        ]
+    }
 
-    # Тест сохранения
-    await buffer.save(test_data)
+    # Test save
+    await buffer.save(test_packet)
 
-    # Тест загрузки
+    # Test load
     loaded = await buffer.load()
-    assert loaded[0] == test_data
+    assert loaded == [test_packet]
 
-    # Тест очистки
+    # Test clear
     await buffer.clear()
     assert await buffer.load() == []

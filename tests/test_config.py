@@ -39,3 +39,13 @@ def test_ssl_config():
         ssl=ssl
     )
     assert config.ssl.certFile == "cert.pem"
+
+def test_config_update_handling(connector):
+    old_config = {"tags": [{"tagId": "test1", "attributes": {"prsJSONata": "value"}}]}
+    new_config = {"tags": [{"tagId": "test1", "attributes": {"prsJSONata": "value*2"}}]}
+
+    connector.platform_config = old_config
+    connector._handle_config_update(new_config)
+
+    assert connector.platform_config == new_config
+    assert connector.data_handler.compiled_expressions["test1"] is not None

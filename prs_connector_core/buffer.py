@@ -12,26 +12,28 @@ class BufferManager:
         self.buffer_dir = Path("buffer") / str(connector_id)
         self.buffer_dir.mkdir(parents=True, exist_ok=True)
 
-    async def save(self, data: dict):
-        """Сохранение данных в буфер"""
-        file_path = self.buffer_dir / "pending.json"
-        async with aiofiles.open(file_path, 'a') as f:
-            await f.write(json.dumps(data) + '\n')
+    async def save(self, packet: dict):
+        """Сохранение целых пакетов"""
+        if not packet.get('data'):
+            return
+
+        file_path = self.buffer_dir / "pending.dat"
+        async with aiofiles.open(file_path, "a") as f:
+            await f.write(json.dumps(packet) + "\n")
 
     async def load(self) -> list:
-        """Загрузка данных из буфера"""
-        file_path = self.buffer_dir / "pending.json"
+        """Загрузка целых пакетов"""
+        file_path = self.buffer_dir / "pending.dat"
         if not file_path.exists():
             return []
 
-        data = []
+        packets = []
         async with aiofiles.open(file_path) as f:
             async for line in f:
-                data.append(json.loads(line))
+                packets.append(json.loads(line))
 
-        # Очистка буфера после загрузки
         await self.clear()
-        return data
+        return packets
 
     async def clear(self):
         """Очистка буфера"""

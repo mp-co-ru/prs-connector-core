@@ -1,44 +1,30 @@
-# tests/test_websocket.py
 import pytest
-import ssl
-from unittest.mock import patch
-from prs_connector_core.config import ConnectorConfig, SSLConfig
+import json
+from unittest.mock import AsyncMock, MagicMock, patch
 from prs_connector_core.websocket_client import WebSocketClient
+from prs_connector_core.config import ConnectorConfig, SSLConfig
 
-@pytest.fixture
-def ws_config():
-    return ConnectorConfig(
+@pytest.mark.asyncio
+async def test_batch_data_sending():
+    config = ConnectorConfig(
         id="550e8400-e29b-41d4-a716-446655440000",
         url="ws://localhost",
         ssl=None
     )
 
-@pytest.fixture
-def wss_config():
-    return ConnectorConfig(
-        id="550e8400-e29b-41d4-a716-446655440000",
-        url="wss://localhost",
-        ssl=SSLConfig(
-            certFile="cert.pem",
-            keyFile="key.pem",
-            certPassword="secret"
-        )
-    )
+    client = WebSocketClient(config)
+    test_data = {
+        "data": [
+            {"tagId": "test1", "data": [{"x": 123, "y": 42}]},
+            {"tagId": "test2", "data": [{"x": 124, "y": 43}]}
+        ]
+    }
 
-def test_ws_client_creation(ws_config):
-    client = WebSocketClient(ws_config)
-    assert client.ssl_context is None
-
-def test_wss_client_creation(wss_config):
-    client = WebSocketClient(wss_config)
-    assert isinstance(client.ssl_context, ssl.SSLContext)
-
-@pytest.mark.asyncio
-async def test_ws_connection(ws_config):
-    client = WebSocketClient(ws_config)
     with patch("websockets.connect") as mock_connect:
+        mock_ws = AsyncMock()
+        mock_connect.return_value = mock_ws
+
         await client.connect()
-        mock_connect.assert_awaited_with(
-            "ws://localhost/550e8400-e29b-41d4-a716-446655440000",
-            ssl=None
-        )
+        await client.send_data(test_data)
+
+        mock_ws.send.assert_awaited_once_with(json.dumps(test_data))

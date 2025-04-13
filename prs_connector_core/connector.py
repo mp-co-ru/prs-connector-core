@@ -189,7 +189,35 @@ class BaseConnector(ABC):
         self.logger.debug(f"Запуск обработки группы с частотой {frequency} мс")
         while self.running:
             start_time = time.monotonic()
-            await self._process_tags_batch(tags)
+
+            # Сбор данных для всех тегов группы
+            data_batch = []
+            timestamp = int(time.time() * 1e6)  # Общая временная метка
+
+            for tag in tags:
+                try:
+                    tag_id = tag['tagId']
+                    raw_value = await self.read_tag(tag)
+                    processed_value = self.data_handler.apply_jsonata(raw_value, tag_id)
+
+                    if self.data_handler.process_value(tag_id, processed_value):
+                        data_batch.append({
+                            "tagId": tag_id,
+                            "data": [{
+                                "x": timestamp,
+                                "y": processed_value,
+                                "q": None
+                            }]
+                        })
+
+                except Exception as e:
+                    self.logger.error(f"Ошибка обработки тега {tag_id}: {str(e)}")
+                    self.data_handler.metrics.log_failure()
+
+            # Отправка одним пакетом для всей группы
+            if data_batch:
+                await self._handle_data_delivery({"data": data_batch})
+
             elapsed = time.monotonic() - start_time
             await asyncio.sleep(max(0, frequency/1000 - elapsed))
 
@@ -237,14 +265,22 @@ class BaseConnector(ABC):
         }
 
     async def _handle_data_delivery(self, packet: dict):
-        """Обработка доставки данных"""
+        """Обработка доставки данных (переименованный метод)"""
         if await self.ws_client.is_connected():
             try:
+                start = time.monotonic()
                 await self.ws_client.send_data(packet)
+                self.data_handler.metrics.log_send(time.monotonic() - start)
+                self.logger.debug(f"Отправлен пакет с {len(packet['data'])} тегами")
             except ConnectionError:
-                await self.buffer.save(packet)
+                await self._buffer_packet(packet)
         else:
-            await self.buffer.save(packet)
+            await self._buffer_packet(packet)
+
+    async def _buffer_packet(self, packet: dict):
+        """Буферизация пакета"""
+        await self.buffer.save(packet)
+        self.logger.warning("Данные помещены в буфер из-за отсутствия соединения")
 
     async def _monitor_connection(self):
         """Мониторинг состояния соединения"""

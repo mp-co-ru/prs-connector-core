@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prs-connector-core"
+version = "0.1.0"
+description = "Base module for Peresvet platform connectors"
+authors = [
+    {name = "Your Name", email = "your.email@example.com"},
+]
+readme = "README.md"
+license = {text = "Apache-2.0"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "websockets >=12.0",
+    "pydantic >=2.0",
+    "jsonata-python >=1.0",
+    "python-dateutil >=2.8",
+    "aiofiles >=23.2.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-account/prs-connector-core"
+Repository = "https://github.com/your-account/prs-connector-core"
+Documentation = "https://prs-connector-core.readthedocs.io"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["prs_connector_core"]
+
+[tool.setuptools.package-data]
+"prs_connector_core" = ["py.typed"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["prs_connector_core*"]
+exclude = ["tests*", "docs*", "examples*"]

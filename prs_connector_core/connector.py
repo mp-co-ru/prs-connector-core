@@ -149,20 +149,24 @@ class BaseConnector(ABC):
         """Обработка пакета тегов"""
         for tag in tags:
             try:
+                tag_id = tag['tagId']
                 raw_value = await self.read_tag(tag)
-                processed_value = self.data_handler.apply_jsonata(
-                    raw_value,
-                    tag['attributes'].get('prsJSONata', '$')
-                )
 
-                if self.data_handler.process_value(tag['tagId'], processed_value):
+                # Получаем предварительно скомпилированное выражение
+                processed_value = raw_value
+
+                # Применяем JSONata только если есть выражение
+                if self.data_handler.compiled_expressions.get(tag_id):
+                    processed_value = self.data_handler.apply_jsonata(raw_value, tag_id)
+
+                if self.data_handler.process_value(tag_id, processed_value):
                     packet = self._create_data_packet(tag, processed_value)
                     await self._handle_data_delivery(packet)
 
             except DataProcessingError as e:
-                self.logger.error(f"Ошибка обработки тега {tag['tagId']}: {e}")
+                self.logger.error(f"Ошибка обработки тега {tag_id}: {e}")
             except Exception as e:
-                self.logger.error(f"Критическая ошибка тега {tag['tagId']}: {e}")
+                self.logger.error(f"Критическая ошибка тега {tag_id}: {e}")
 
     def _create_data_packet(self, tag: dict, value: Any) -> dict:
         """Формирование пакета данных"""

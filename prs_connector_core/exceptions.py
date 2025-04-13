@@ -21,3 +21,6 @@ class ConfigValidationError(Exception):
 class DataProcessingError(Exception):
     """Ошибка обработки данных"""
     pass
+
+class JSONataError(Exception):
+    """Ошибка выполнения JSONata выражения"""

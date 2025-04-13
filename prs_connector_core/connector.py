@@ -31,6 +31,22 @@ class BaseConnector(ABC):
         self.running = False
         self._scheduler_tasks: Dict[int, asyncio.Task] = {}
         self._cached_config_path = Path(f"{self.config.id}.json")
+        self._last_metrics_log = time.monotonic()
+
+    async def _log_metrics(self):
+        """Логирование метрик каждые 5 минут"""
+        while self.running:
+            await asyncio.sleep(300)  # 5 минут
+            stats = self.data_handler.metrics.get_stats()
+            self.logger.info(
+                "Метрики производительности:\n"
+                f"Обработано тегов: {stats['total_processed']}\n"
+                f"Среднее время обработки: {stats['avg_processing_time']:.4f} сек\n"
+                f"Среднее время JSONata: {stats['avg_jsonata_time']:.4f} сек\n"
+                f"Среднее время отправки: {stats['avg_send_time']:.4f} сек\n"
+                f"Процент ошибок: {stats['failure_rate']:.2%}"
+            )
+            self.data_handler.metrics.reset()
 
     def _parse_args(self, default_config: str) -> argparse.Namespace:
         """Парсинг аргументов командной строки"""
@@ -116,6 +132,7 @@ class BaseConnector(ABC):
         try:
             await self.connect_to_platform()
             await self._manage_schedulers()
+            asyncio.create_task(self._log_metrics())
             await self._monitor_connection()
         except KeyboardInterrupt:
             self.logger.info("Остановка по запросу пользователя")
@@ -123,6 +140,37 @@ class BaseConnector(ABC):
             self.logger.error(f"Критическая ошибка: {e}")
         finally:
             await self._cleanup_resources()
+
+    async def _handle_config_update(self, new_config: dict):
+        """Обработка обновления конфигурации"""
+        try:
+            old_tags = {t['tagId']: t for t in self.platform_config.get('tags', [])}
+            new_tags = {t['tagId']: t for t in new_config.get('tags', [])}
+
+            # Определение измененных тегов
+            changed_tags = [
+                t for t in new_config['tags']
+                if t['tagId'] not in old_tags or
+                self.data_handler._calculate_hash(t['attributes']) !=
+                self.data_handler.config_hashes.get(t['tagId'], '')
+            ]
+
+            if changed_tags:
+                self.logger.info(f"Обнаружены изменения в {len(changed_tags)} тегах")
+                await self._apply_config_changes(new_config, changed_tags)
+
+        except Exception as e:
+            self.logger.error(f"Ошибка обработки обновления конфигурации: {str(e)}")
+
+    async def _apply_config_changes(self, new_config: dict, changed_tags: list):
+        """Применение изменений конфигурации"""
+        # Обновление основной конфигурации
+        self.platform_config = new_config
+        self._save_platform_config()
+
+        # Перезапуск планировщиков с новой конфигурацией
+        await self._manage_schedulers()
+        self.logger.info("Конфигурация успешно обновлена")
 
     async def _manage_schedulers(self):
         """Управление задачами обработки тегов"""
@@ -146,27 +194,36 @@ class BaseConnector(ABC):
             await asyncio.sleep(max(0, frequency/1000 - elapsed))
 
     async def _process_tags_batch(self, tags: list):
-        """Обработка пакета тегов"""
+        """Обработка пакета тегов с метриками"""
         for tag in tags:
+            tag_id = tag['tagId']
             try:
-                tag_id = tag['tagId']
+                start_time = time.monotonic()  # Начало замера времени обработки
+
+                # Чтение значения из источника
                 raw_value = await self.read_tag(tag)
 
-                # Получаем предварительно скомпилированное выражение
+                # Применение JSONata преобразования
                 processed_value = raw_value
-
-                # Применяем JSONata только если есть выражение
                 if self.data_handler.compiled_expressions.get(tag_id):
                     processed_value = self.data_handler.apply_jsonata(raw_value, tag_id)
 
+                # Проверка необходимости отправки
                 if self.data_handler.process_value(tag_id, processed_value):
+                    send_start = time.monotonic()
                     packet = self._create_data_packet(tag, processed_value)
                     await self._handle_data_delivery(packet)
+                    self.data_handler.metrics.log_send(time.monotonic() - send_start)
+
+                # Фиксация общего времени обработки
+                self.data_handler.metrics.log_processing(time.monotonic() - start_time)
 
             except DataProcessingError as e:
                 self.logger.error(f"Ошибка обработки тега {tag_id}: {e}")
+                self.data_handler.metrics.log_failure()
             except Exception as e:
                 self.logger.error(f"Критическая ошибка тега {tag_id}: {e}")
+                self.data_handler.metrics.log_failure()
 
     def _create_data_packet(self, tag: dict, value: Any) -> dict:
         """Формирование пакета данных"""

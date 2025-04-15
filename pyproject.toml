@@ -3,7 +3,7 @@ requires = ["setuptools>=65.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "prs-connector-core"
+name = "prs_connector_core"
 version = "0.1.0"
 description = "Base module for Peresvet platform connectors"
 authors = [
@@ -18,17 +18,18 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "websockets >=12.0",
-    "pydantic >=2.0",
-    "jsonata-python >=1.0",
-    "python-dateutil >=2.8",
-    "aiofiles >=23.2.1",
+    "websockets ==15.0.1",
+    "jsonata-python ==0.5.3",
+    "colorlog ==6.9.0",
+    "python-json-logger ==3.3.0",
+    "pydantic ==2.11.3",
+    "aiofiles ==24.1.0"
 ]
 
 [project.urls]
-Homepage = "https://github.com/your-account/prs-connector-core"
-Repository = "https://github.com/your-account/prs-connector-core"
-Documentation = "https://prs-connector-core.readthedocs.io"
+Homepage = "https://github.com/mp-co-ru/prs-connector-core"
+Repository = "https://github.com/mp-co-ru/prs-connector-core"
+Documentation = "https://github.com/mp-co-ru/prs-connector-core"
 
 [tool.setuptools]
 include-package-data = true
@@ -37,7 +38,7 @@ packages = ["prs_connector_core"]
 [tool.setuptools.package-data]
 "prs_connector_core" = ["py.typed"]
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["prs_connector_core*"]
-exclude = ["tests*", "docs*", "examples*"]
+#[tool.setuptools.packages.find]
+#where = ["."]
+#include = ["prs_connector_core*"]
+#exclude = ["tests*", "docs*", "examples*"]

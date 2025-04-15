@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from prs_connector_core import BaseConnector
+from prs_connector_core.connector import BaseConnector
 from prs_connector_core.config import ConnectorConfig
 
 class TestConnector(BaseConnector):

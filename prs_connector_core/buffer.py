@@ -9,34 +9,42 @@ import aiofiles
 
 class BufferManager:
     def __init__(self, connector_id: UUID):
-        self.buffer_dir = Path("buffer") / str(connector_id)
+        self.buffer_dir = Path("buffer")
         self.buffer_dir.mkdir(parents=True, exist_ok=True)
+        self.file_path = self.buffer_dir / f"{connector_id}.dat"
 
     async def save(self, packet: dict):
         """Сохранение целых пакетов"""
         if not packet.get('data'):
             return
 
-        file_path = self.buffer_dir / "pending.dat"
-        async with aiofiles.open(file_path, "a") as f:
+        async with aiofiles.open(self.file_path, "a") as f:
             await f.write(json.dumps(packet) + "\n")
 
-    async def load(self) -> list:
+    async def load(self) -> dict:
         """Загрузка целых пакетов"""
-        file_path = self.buffer_dir / "pending.dat"
-        if not file_path.exists():
+        if not self.file_path.exists():
             return []
 
-        packets = []
-        async with aiofiles.open(file_path) as f:
+        data = {}
+        packets = {"data": []}
+        async with aiofiles.open(self.file_path, "r") as f:
             async for line in f:
-                packets.append(json.loads(line))
+                data_in_line = json.loads(line)
+                for data_item in data_in_line["data"]:
+                    data_ar = data.setdefault(data_item["tagId"], [])
+                    data_ar.extend(data_item["data"])
+
+            for key, item in data.items():
+                packets["data"].append({
+                    "tagId": key,
+                    "data": item
+                })
 
         await self.clear()
         return packets
 
     async def clear(self):
         """Очистка буфера"""
-        file_path = self.buffer_dir / "pending.json"
-        if file_path.exists():
-            file_path.unlink()
+        if self.file_path.exists():
+            self.file_path.unlink()

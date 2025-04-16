@@ -3,17 +3,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from prs_connector_core.connector import BaseConnector
 from prs_connector_core.config import ConnectorConfig
 
-class TestConnector(BaseConnector):
-    async def read_tag(self, tag_config):
-        return 42
-
-@pytest.fixture
-def connector():
-    return TestConnector(config_path="tests/test_config.json")
-
 @pytest.mark.asyncio
 async def test_group_data_processing(connector):
-    connector.platform_config = {
+    connector.config = {
         "tags": [
             {
                 "tagId": "test1",

@@ -10,13 +10,15 @@ colorlog = "6.9.0"
 python-json-logger = "3.3.0"
 pydantic = "2.11.3"
 aiofiles = "24.1.0"
-prs-connector-core = {file = "dist/prs_connector_core-0.1.0-py3-none-any.whl"}
+prs-connector-core = {file = ".", editable = true}
 
 [dev-packages]
 pytest = "8.3.5"
 pytest-asyncio = "0.26.0"
 setuptools = "78.1.0"
 build = "1.2.2.post1"
+pytest-mock = "3.14.0"
+uvloop = "0.21.0"
 
 [requires]
 python_version = "3.12"

@@ -21,8 +21,7 @@ class BaseConnector(ABC):
     """Абстрактный базовый класс для всех коннекторов"""
 
     def __init__(self, config_path: str = 'config.json'):
-        self.args = self._parse_args(config_path)
-        self.config = self._load_config(self.args.config)
+        self.config = self._load_config(config_path)
         self.logger = configure_logger(self.config.id)
         self.ws_client = WebSocketClient(self.config)
         self.data_handler = DataHandler()
@@ -47,12 +46,6 @@ class BaseConnector(ABC):
                 f"Процент ошибок: {stats['failure_rate']:.2%}"
             )
             self.data_handler.metrics.reset()
-
-    def _parse_args(self, default_config: str) -> argparse.Namespace:
-        """Парсинг аргументов командной строки"""
-        parser = argparse.ArgumentParser()
-        parser.add_argument('--config', default=default_config)
-        return parser.parse_args()
 
     def _load_config(self, path: str) -> ConnectorConfig:
         """Загрузка конфигурации коннектора"""

@@ -35,4 +35,9 @@ jobs:
       - name: Run tests
         run: |
           source .venv/bin/activate
-          pytest tests/. --maxfail=5 --disable-warnings -v
+          pytest
+
+      - name: Upload coverage to Codecov
+        uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

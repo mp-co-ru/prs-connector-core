@@ -1,3 +1,25 @@
+Metadata-Version: 2.4
+Name: prs_connector_core
+Version: 0.1.0
+Summary: Базовый модуль для коннекторов платформы Пересвет
+Author-email: ООО МПК <info@mp-co.ru>
+License: Apache-2.0
+Project-URL: Homepage, https://github.com/mp-co-ru/prs-connector-core
+Project-URL: Repository, https://github.com/mp-co-ru/prs-connector-core
+Project-URL: Documentation, https://github.com/mp-co-ru/prs-connector-core
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: aiomqtt==2.3.2
+Requires-Dist: jsonata-python==0.5.3
+Requires-Dist: colorlog==6.9.0
+Requires-Dist: python-json-logger==3.3.0
+Requires-Dist: pydantic==2.11.3
+Dynamic: license-file
+
 # prs-connector-core
 
 Базовый модуль для создания коннекторов платформы Peresvet

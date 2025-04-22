@@ -1,5 +1,6 @@
 import pytest
 
+'''
 from prs_connector_core.connector import BaseConnector
 
 class TestConnector(BaseConnector):
@@ -9,3 +10,4 @@ class TestConnector(BaseConnector):
 @pytest.fixture
 def connector():
     return TestConnector(config_path="tests/test_config.json")
+'''

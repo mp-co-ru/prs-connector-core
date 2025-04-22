@@ -5,9 +5,9 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "prs_connector_core"
 version = "0.1.0"
-description = "Base module for Peresvet platform connectors"
+description = "Базовый модуль для коннекторов платформы Пересвет"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "ООО МПК", email = "info@mp-co.ru"},
 ]
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -18,12 +18,11 @@ classifiers = [
 ]
 requires-python = ">=3.8"
 dependencies = [
-    "websockets ==15.0.1",
-    "jsonata-python ==0.5.3",
-    "colorlog ==6.9.0",
-    "python-json-logger ==3.3.0",
-    "pydantic ==2.11.3",
-    "aiofiles ==24.1.0"
+    "aiomqtt==2.3.2",
+    "jsonata-python==0.5.3",
+    "colorlog==6.9.0",
+    "python-json-logger==3.3.0",
+    "pydantic==2.11.3"
 ]
 
 [project.urls]
@@ -37,8 +36,3 @@ packages = ["prs_connector_core"]
 
 [tool.setuptools.package-data]
 "prs_connector_core" = ["py.typed"]
-
-#[tool.setuptools.packages.find]
-#where = ["."]
-#include = ["prs_connector_core*"]
-#exclude = ["tests*", "docs*", "examples*"]

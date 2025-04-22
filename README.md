@@ -4,6 +4,7 @@
 
 [![Лицензия Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)
+[![Coverage](https://coveralls.io/repos/github/vovaman/repo/badge.svg?branch=dev)](https://coveralls.io/github/vovaman/prs-connector-core)
 
 ## Описание проекта
 

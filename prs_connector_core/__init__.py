@@ -1,12 +1,41 @@
 """
-Базовый модуль для создания коннекторов платформы Peresvet
+Базовый модуль для создания коннекторов Peresvet
+
+Экспортирует основные классы и исключения:
+- BaseConnector - базовый класс коннектора
+- Конфигурационные модели
+- Кастомные исключения
 """
 
-__version__ = "0.1.0"
+from .connector import BaseConnector
+from .config import (
+    ConnectorConfig,
+    PlatformConfig,
+    TagConfig,
+    LogConfig,
+    SSLConfig
+)
+from .exceptions import (
+    ConnectorBaseError,
+    ConnectionError,
+    ConfigValidationError,
+    DataProcessingError,
+    PlatformConfigError
+)
+from typing_extensions import Self
 __all__ = [
+    'Self',
     'BaseConnector',
     'ConnectorConfig',
-    'DataHandler',
-    'configure_logger',
-    'ConfigValidationError'
+    'PlatformConfig',
+    'TagConfig',
+    'LogConfig',
+    'SSLConfig',
+    'ConnectorBaseError',
+    'ConnectionError',
+    'ConfigValidationError',
+    'DataProcessingError',
+    'PlatformConfigError'
 ]
+
+__version__ = "0.1.0"

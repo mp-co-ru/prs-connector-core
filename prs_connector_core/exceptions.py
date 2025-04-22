@@ -1,26 +1,39 @@
 """
-Пользовательские исключения
+Кастомные исключения для коннекторов Peresvet
 """
 
-class ConnectionError(Exception):
-    """Ошибка соединения с платформой"""
-    pass
+class ConnectorBaseError(Exception):
+    """Базовое исключение для всех ошибок коннектора"""
+    def __init__(self, message: str = "Ошибка коннектора"):
+        super().__init__(message)
+        self.message = message
 
-class ConfigValidationError(Exception):
+class ConnectionError(ConnectorBaseError):
+    """Ошибка соединения с платформой или источником данных"""
+    def __init__(self, target: str):
+        message = f"Не удалось подключиться к {target}"
+        super().__init__(message)
+
+class ConfigValidationError(ConnectorBaseError):
     """Ошибка валидации конфигурации"""
-    pass
+    def __init__(self, field: str, details: str):
+        message = f"Некорректная конфигурация в поле {field}: {details}"
+        super().__init__(message)
 
-class DataProcessingError(Exception):
-    """Ошибка обработки данных"""
-    pass
+class DataProcessingError(ConnectorBaseError):
+    """Ошибка обработки данных тега"""
+    def __init__(self, tag_id: str, reason: str):
+        message = f"Ошибка обработки тега {tag_id}: {reason}"
+        super().__init__(message)
 
-class ConfigValidationError(Exception):
-    """Ошибка валидации конфигурации (наследуем от базового исключения)"""
-    pass
+class PlatformConfigError(ConnectorBaseError):
+    """Ошибка конфигурации платформы"""
+    def __init__(self, reason: str):
+        message = f"Некорректная конфигурация платформы: {reason}"
+        super().__init__(message)
 
-class DataProcessingError(Exception):
-    """Ошибка обработки данных"""
-    pass
-
-class JSONataError(Exception):
-    """Ошибка выполнения JSONata выражения"""
+class JsonataError(ConnectorBaseError):
+    """Ошибка выражения jsonata"""
+    def __init__(self, tag_id: str, reason: str):
+        message = f"Ошибка обработки jsonata '{reason}' для тега {tag_id}"
+        super().__init__(message)

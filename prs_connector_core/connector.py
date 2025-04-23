@@ -23,7 +23,7 @@ class BaseConnector(ABC):
         try:
             self.config_from_file = ConnectorConfig.from_file(config_file)
         except ConfigValidationError as e:
-            self._emergency_shutdown(f"Ошибка конфигурации: {e.details}")
+            self._emergency_shutdown(f"Ошибка конфигурации: {e}")
 
         # Инициализация клиента MQTT
         self.mqtt_client : aiomqtt.Client = None

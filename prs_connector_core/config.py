@@ -13,13 +13,13 @@ class SSLConfig(BaseModel):
 
 class LogConfig(BaseModel):
     level: str = "INFO"
-    fileName: str = "logs/connector.log"
+    fileName: str = "logs/prs_connector.log"
     maxBytes: int = 10 * 1024 * 1024  # 10MB
     backupCount: int = 10
 
 class ConfigStringPlatform(BaseModel):
-    source: dict
-    log: LogConfig
+    source: dict = {}
+    log: LogConfig = LogConfig()
 
 class ConnectorConfig(BaseModel):
     id: UUID4
@@ -52,7 +52,6 @@ class ConnectorConfig(BaseModel):
 
         return v
 
-
     @model_validator(mode='after')
     def validate_ssl_requirements(self) -> Self:
         parsed = urlparse(self.url)
@@ -76,18 +75,12 @@ class ConnectorConfig(BaseModel):
     def from_file(cls, config_file: str) -> Self:
         """Загрузка конфигурации из JSON-файла"""
         try:
-            '''
-            with open(config_file, "r") as f:
-                config_data = json.load(f)
-            return cls.model_validate(config_data)
-            '''
-
-            if (file := Path(config_file)).exists():
-                return cls.model_validate_json(file.read_text())
+            file = Path(config_file)
+            return cls.model_validate_json(file.read_text())
 
         except FileNotFoundError as e:
             raise ConfigValidationError(
-                field="config_file",
+                field='config_file',
                 details=f"Файл конфигурации не найден: {config_file}"
             ) from e
 
@@ -98,7 +91,10 @@ class ConnectorConfig(BaseModel):
             ) from e
 
         except ValidationError as e:
-            raise ConfigValidationError.from_pydantic(e) from e
+            raise ConfigValidationError(
+                field="config_file",
+                details="Ошибка валидации конфигурации"
+            ) from e
 
 class TagAttributes(BaseModel):
     prsMaxLineDev: float | None = None
@@ -111,14 +107,14 @@ class TagConfig(BaseModel):
     attributes: TagAttributes | None = None
 
 class PlatformConfig(BaseModel):
-    prsJsonConfigString: ConfigStringPlatform | None = None
+    prsJsonConfigString: ConfigStringPlatform = ConfigStringPlatform()
     tags: list[TagConfig] = []
 
     @classmethod
     def from_file(cls, connector_id: UUID4) -> Self:
         if (config_file := Path(f"platform_{connector_id}.json")).exists():
             return cls.model_validate_json(config_file.read_text())
-        return PlatformConfig()
+        return PlatformConfig(prsJsonConfigString=ConfigStringPlatform(log=LogConfig(fileName=f"logs/prs_connector_{str(connector_id)}.log")))
 
     def save(self, connector_id: UUID4) -> None:
         Path(f"platform_{connector_id}.json").write_text(

@@ -12,11 +12,11 @@ def setup_logger(connector_id: str, config: LogConfig) -> logging.Logger:
         datefmt='%Y-%m-%d %H:%M:%S.%f'
     )
 
-    log_file = Path(config.fileName)
-    log_file.mkdir(parents=True, exist_ok=True)
+    #log_file = Path(config.fileName)
+    #log_file.mkdir(parents=True, exist_ok=True)
 
     file_handler = RotatingFileHandler(
-        config.fileName.format(connector_id=connector_id),
+        config.fileName,
         maxBytes=config.maxBytes,
         backupCount=config.backupCount
     )

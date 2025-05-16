@@ -17,23 +17,23 @@ def test_connector_config_id():
 
 def test_connector_config_protocol():
     config = ConnectorConfig(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         url="mqtt://localhost"
     )
     assert config.url.startswith("mqtt://")
 
     with pytest.raises(ConfigValidationError):
-        ConnectorConfig(id=uuid.uuid4(), url="http://localhost")
+        ConnectorConfig(id=str(uuid.uuid4()), url="http://localhost")
 
 def test_connector_config_server():
     config = ConnectorConfig(
-        id=uuid.uuid4(),
+        id=str(uuid.uuid4()),
         url="mqtt://localhost"
     )
     assert config.url
 
     with pytest.raises(ConfigValidationError):
-        ConnectorConfig(id=uuid.uuid4(), url="mqtt://")
+        ConnectorConfig(id=str(uuid.uuid4()), url="mqtt://")
 
 def test_connector_config_from_file(mocker):
     mocker.patch("pathlib.Path.exists", return_value=True)
@@ -59,5 +59,6 @@ def test_connector_config_ssl(mocker):
         )
     )
     config = ConnectorConfig.from_file('config.json')
+    assert config.ssl is not None
     assert config.ssl.certFile == "cert.pem"
     assert config.ssl.keyFile == "key.pem"

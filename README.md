@@ -42,11 +42,16 @@
 - pipenv
 - pyenv
 
-### Инструкция
+### Работа с проектом
 
-1. Клонируйте репозиторий и выполните команды в консоли:
+Клонируйте репозиторий и выполните команды в консоли:
 ```bash
-git clone https://github.com/your-account/prs-connector-core.git
+git clone git@github.com:mp-co-ru/prs-connector-core.git
 cd prs-connector-core
 pipenv install
+```
+
+### Запуск тестов
+```bash
+$ pytest
 ```

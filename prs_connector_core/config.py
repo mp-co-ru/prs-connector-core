@@ -9,7 +9,18 @@ from .exceptions import ConfigValidationError
 class SSLConfig(BaseModel):
     certFile: str
     keyFile: str
-    certPassword: str | None = None
+    caFile: str
+    certsRequired: int
+
+    @field_validator('certsRequired', mode='before')
+    @classmethod
+    def validate_id(cls, v: str) -> int:
+        match v:
+            case 'CERTS_NONE': return 0
+            case 'CERTS_OPTIONAL': return 1
+            case 'CERTS_REQUIRED': return 2
+            case _:
+                raise ConfigValidationError(field='certsRequired', details="certRequuired должен быть `CERTS_NONE`, `CERTS_OPTIONAL` или `CERTS_REQUIRED`")
 
 class LogConfig(BaseModel):
     level: str = "INFO"
@@ -17,12 +28,12 @@ class LogConfig(BaseModel):
     maxBytes: int = 10 * 1024 * 1024  # 10MB
     backupCount: int = 10
 
-class ConfigStringPlatform(BaseModel):
+class PrsJsonConfigStringFromPlatform(BaseModel):
     source: dict = {}
     log: LogConfig = LogConfig()
 
 class ConnectorConfig(BaseModel):
-    id: UUID4
+    id: str
     url: str
     ssl: SSLConfig | None = None
 
@@ -103,20 +114,29 @@ class TagAttributes(BaseModel):
     prsJSONata: str
 
 class TagConfig(BaseModel):
-    tagId: UUID4
-    attributes: TagAttributes | None = None
+    tagId: str
+    attributes: TagAttributes
+
+    @field_validator('tagId', mode='before')
+    @classmethod
+    def validate_id(cls, v: str) -> str:
+        try:
+            uuid.UUID(str(v))
+            return v
+        except ValueError as e:
+            raise ConfigValidationError(field='tagId', details="tagId должен быть в виде GUID")
 
 class PlatformConfig(BaseModel):
-    prsJsonConfigString: ConfigStringPlatform = ConfigStringPlatform()
+    prsJsonConfigString: PrsJsonConfigStringFromPlatform = PrsJsonConfigStringFromPlatform()
     tags: list[TagConfig] = []
 
     @classmethod
-    def from_file(cls, connector_id: UUID4) -> Self:
+    def from_file(cls, connector_id: str) -> Self:
         if (config_file := Path(f"platform_{connector_id}.json")).exists():
             return cls.model_validate_json(config_file.read_text())
-        return PlatformConfig(prsJsonConfigString=ConfigStringPlatform(log=LogConfig(fileName=f"logs/prs_connector_{str(connector_id)}.log")))
+        return cls(prsJsonConfigString=PrsJsonConfigStringFromPlatform(log=LogConfig()))
 
-    def save(self, connector_id: UUID4) -> None:
+    def save(self, connector_id: str) -> None:
         Path(f"platform_{connector_id}.json").write_text(
             self.model_dump_json(indent=2, exclude_unset=True)
         )

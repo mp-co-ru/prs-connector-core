@@ -55,3 +55,121 @@ pipenv install
 ```bash
 $ pytest
 ```
+
+## Формат сообщений
+### Сообщения от коннектора к платформе
+#### Запрос на получение полной конфигурации
+```json
+{
+    "action": "prsConnector.get_configuration",
+    "data": {
+        "id": "<connector_guid>"
+    }
+}
+
+```
+#### Запись данных
+```json
+{
+    "action": "prsConnector.data_set.*",
+    "data": {
+        "data": [
+            {
+                "tagId": "<tag_id>",
+                "data": [[], ]
+            }
+        ]
+    }
+}
+```
+### Сообщения от платформы коннектору
+#### Полная конфигурация
+Это сообщение является ответом на запрос коннектора.
+```json
+{
+    "action": "prsConnector.full_configuration",
+    "data": {
+        "prsJsonConfigString": {
+            "source": {},
+            "log": {
+                "level": "INFO",
+                "fileName": "logs/prs_connector.log",
+                "maxBytes": 10485760,
+                "backupCount": 10
+            }
+        },
+        "tags": {
+            "<tag_id>": {
+                "prsJsonConfigString": {
+                    "source": {},
+                    "maxDev": 0.5,
+                    "JSONata": "<some jsonata expression>"
+                },
+                "prsValueTypeCode": 1
+            }
+        }
+    }
+}
+```
+``data.prsJsonConfigString.source`` - информация для коннектора, как соединиться с источником данных, формат зависит от
+конкретной реализации коннектора;
+
+``data.prsJsonConfigString.log`` - параметры логирования;
+
+``tags`` - массив тегов, данные по котороым должен отправлять коннектор;
+
+``tags[*].prsJsonConfigString.source`` - информация для коннектора о том, как получать данные по тегу из источника данных, формат зависит от конкретной реализации коннектора;
+
+``tags[*].prsJsonConfigString.maxDev`` - значимое отклонение значения тега; новое полученное коннектором значение тега будет отправлено в платформу только в том случае, если отличается от последнего отправленного не менее чем на ``maxDev``;
+
+``tags[*].prsJsonConfigString.JSONata`` - JSONata-выражение, которое будет применено к значению тега, полученному из источника данных.
+
+### Изменение конфигурации коннектора
+Коннектор получает это сообщение в случае, когда меняется его конфигурация в платформе.
+```json
+{
+    "action": "prsConnector.connector_configuration",
+    "data": {
+        "prsJsonConfigString": {
+            "source": {},
+            "log": {
+                "level": "INFO",
+                "fileName": "logs/prs_connector.log",
+                "maxBytes": 10485760,
+                "backupCount": 10
+            }
+        }
+    }
+}
+```
+
+### Добавление нового тега(-ов) или изменение конфигурации тега(-ов)
+Коннектор получает данное сообщение, если в список тегов, по которым он должен получать сообщение, добавляются новые теги или меняется конфигурация по существующем в списке тегам.
+```json
+{
+    "action": "prsConnector.tags_configuration",
+    "data": {
+        "tags": {
+            "<tag_id>": {
+                "prsJsonConfigString": {
+                    "source": {},
+                    "maxDev": 0.5,
+                    "JSONata": "<some jsonata expression>"
+                },
+                "prsValueTypeCode": 1
+            }
+        }
+    }
+}
+```
+
+### Удаление тегов из списка
+Коннектор получает данное сообщение, если из списка тегов удаляются какие-либо теги.
+```json
+{
+    "action": "prsConnector.tags_deleted",
+    "data": {
+        "tags": ["<tag_id1>", "<tag_id2>"]
+    }
+}
+```

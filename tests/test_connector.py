@@ -4,10 +4,10 @@ from unittest.mock import MagicMock
 from prs_connector_core.connector import BaseConnector
 
 class TestConnector(BaseConnector):
-    async def connect_to_source(self) -> None:
+    async def _connect_to_source(self) -> None:
         pass
 
-    async def read_tags(self, tags: list[str]) -> dict[str, Any]:
+    async def _read_tags(self, tags: list[str]) -> dict[str, Any]:
         """Абстрактный метод для чтения тегов из источника"""
         return {}
 

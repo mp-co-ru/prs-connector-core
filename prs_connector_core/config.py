@@ -142,8 +142,11 @@ class PlatformConfig(BaseModel):
     @classmethod
     def from_file(cls, connector_id: str) -> Self:
         if (config_file := Path(cls._form_file_name(connector_id=connector_id))).exists():
-            return cls.model_validate_json(config_file.read_text())
-        return cls()
+            new_inst = cls.model_validate_json(config_file.read_text())
+        else:
+            new_inst = cls()
+        new_inst.prsJsonConfigString.log.fileName = f"logs/prs_connector_{connector_id}.log"
+        return new_inst
 
     def save(self, connector_id: str) -> None:
         Path(self._form_file_name(connector_id=connector_id)).write_text(

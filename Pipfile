@@ -8,6 +8,7 @@ pydantic = "2.11.3"
 jsonata-python = "0.5.3"
 aiomqtt = "2.3.2"
 prs-connector-core = {file = ".", editable = true}
+aiofiles = "24.1.0"
 
 [dev-packages]
 pytest = "8.3.5"

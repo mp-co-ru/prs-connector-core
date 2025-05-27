@@ -10,7 +10,7 @@ from typing import Any
 import signal
 import logging
 import aiomqtt
-from collections import defaultdict
+import aiofiles
 from abc import ABC, abstractmethod
 from pathlib import Path
 from urllib.parse import urlparse
@@ -43,7 +43,7 @@ class BaseConnector(ABC):
         self._source_pool = None
 
         # Инициализация конфигурации от платформы
-        self._config_from_platfrom : PlatformConfig = PlatformConfig()
+        self._config_from_platfrom : PlatformConfig = PlatformConfig.from_file(self._config_from_file.id)
         # кэш тегов
         # содержит JSONata выражения и последние отправленные в платформу значения
         # имеет вид:
@@ -55,18 +55,14 @@ class BaseConnector(ABC):
         # }
         self._tag_cache = {}
 
-        # группы тегов
-        self._tag_groups: defaultdict = defaultdict(list)
-
-        self._logger: logging.Logger = logging.getLogger(f"prs_connector_{self._config_from_file.id}")
+        self._setup_logger()
 
         # очередь данных для отправки в платформу
         self._data_queue: asyncio.Queue = asyncio.Queue()
         # блокировка для работы с очередью
         self._data_queue_lock: asyncio.Lock = asyncio.Lock()
         # имя временного файла буфера
-        self._buf_tmp_file_name = f"backup_{self._config_from_file.id}.tmp"
-        self._buf_final_file_name = f"backup_{self._config_from_file.id}.json"
+        self._buf_tmp_file_name = f"backup_{self._config_from_file.id}.dat"
         # флаг коннекта к платформе
         self._mqtt_connected = asyncio.Event()
 
@@ -103,12 +99,35 @@ class BaseConnector(ABC):
         except:
             self._emergency_shutdown("Ошибка загрузки сертификатов.")
 
+        for tag_id in self._config_from_platfrom.tags.keys():
+            self._create_tag_cache(tag_id)
+
+        self._connect_to_platform_task = asyncio.create_task(self._connect_to_platform())
+        self._connect_to_source_task = asyncio.create_task(self._connect_to_source())
+        self._handle_messages_task = asyncio.create_task(self._handle_messages())
+        self._read_tags_task = asyncio.create_task(self._read_tags())
+        self._push_messages_task = asyncio.create_task(self._push_messages())
+
+        self._buf_file = aiofiles.open(self._buf_tmp_file_name, mode="+a")
+
     async def _shutdown(self):
         """Обработчик завершения работы"""
         self._logger.info(f"Получен сигнал завершения работы, сохраняем данные...")
-        await self._save_queue_to_disk()
+
+        # остановим все задачи
+        self._connect_to_platform_task.cancel()
+        self._mqtt_connected.clear()
+        self._connect_to_source_task.cancel()
+        self._handle_messages_task.cancel()
+        self._read_tags_task.cancel()
+
+        while not self._data_queue.empty():
+            await asyncio.sleep(0.1)
+        self._push_messages_task.cancel()
+
         self._loop.stop()
 
+    '''
     async def _save_queue_to_disk(self):
         """Атомарное сохранение очереди в файл"""
         async with self._data_queue_lock:
@@ -126,6 +145,7 @@ class BaseConnector(ABC):
                     json.dump(items, f)
                 os.replace(self._buf_tmp_file_name, self._buf_final_file_name)
                 self._logger.info("Данные сохранены в файл.")
+    '''
 
     async def _load_queue_from_disk(self):
         """Загрузка данных из файла в очередь"""
@@ -143,6 +163,25 @@ class BaseConnector(ABC):
         except (FileNotFoundError, json.JSONDecodeError):
             pass
 
+    def _create_tag_cache(self, tag_id: str):
+        # в случае, если требуется кэш другого вида, необходимо переопределить
+        # данный метод в классе-наследнике,
+        # при этом из переопределённого метода необходимо вызвать данный метод
+
+        self._tag_cache[tag_id] = {
+            "last_value": None,
+            "JSONataExpr": None
+        }
+        expr = None
+        try:
+            expr = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.JSONata
+            if expr:
+                self._tag_cache[tag_id]["JSONataExpr"] = Jsonata(expr)
+
+            self._logger.info(f"Создан кэш для тега {tag_id}")
+        except:
+            self._logger.exception(f"Тег {tag_id}. Ошибка создания JSONata выражения '{expr}'")
+
     def _convert_value(self, value, type_code: int):
         match type_code:
             case 1: return int(value)
@@ -154,6 +193,22 @@ class BaseConnector(ABC):
                     tag_id="system",
                     reason=f"Неподдерживаемый тип данных: {code}"
                 )
+
+    def _emergency_shutdown(self, message: str) -> None:
+        """Аварийное завершение работы при критических ошибках"""
+        logger = logging.getLogger("prs_emergency")
+        logger.error(message)
+        raise RuntimeError(message)
+
+    async def _push_messages(self):
+        while True:
+            mes = await self._data_queue.get()
+            if self._mqtt_connected:
+                await self._mqtt_client.publish(topic="prsTag.app_api.data_set.*", payload=mes, qos=1) # type: ignore
+            else:
+                await self._buf_file.write()
+
+
 
     def _process_tag_data(self, tag: TagConfig, raw_value):
         try:
@@ -168,22 +223,7 @@ class BaseConnector(ABC):
                 reason=str(e)
             ) from e
 
-    def _emergency_shutdown(self, message: str) -> None:
-        """Аварийное завершение работы при критических ошибках"""
-        logger = logging.getLogger("prs_emergency")
-        logger.error(message)
-        raise RuntimeError(message)
-
     async def run(self) -> None:
-
-        # обрабатываем конфигурацию
-        cached_paltform_config : PlatformConfig = PlatformConfig()
-        try:
-            cached_paltform_config = PlatformConfig.from_file(self._config_from_file.id)
-        except Exception as ex:
-            self._emergency_shutdown(f"Ошибка чтения конфигурации из кэша: {ex}")
-
-        await self._get_full_configuration_from_platform(cached_paltform_config.model_dump())
 
         for sig in [signal.SIGINT, signal.SIGTERM]:
             self._loop.add_signal_handler(
@@ -191,9 +231,13 @@ class BaseConnector(ABC):
             )
 
         try:
-
-
-            pass
+            asyncio.gather(
+                self._connect_to_platform(),
+                self._connect_to_source(),
+                self._handle_messages(),
+                self._read_tags(),
+                self._push_messages()
+            )
 
         except aiomqtt.MqttError as e:
             self._logger.exception(f"Ошибка подключения: {e}")
@@ -280,29 +324,25 @@ class BaseConnector(ABC):
             self._config_from_platfrom.save(self._config_from_file.id)
             self._logger.info("Конфигурация тегов изменена.")
 
-    def _create_tag_cache(self, tag_id: str):
-        self._tag_cache[tag_id] = {
-            "last_value": None,
-            "JSONataExpr": None
-        }
-        expr = None
-        try:
-            expr = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.JSONata
-            if expr:
-                self._tag_cache[tag_id]["JSONataExpr"] = Jsonata(expr)
-        except:
-            self._logger.exception(f"Тег {tag_id}. Ошибка создания JSONata выражения '{expr}'")
+
+
+
 
     async def _tags_deleted(self, mes: dict):
         # удаление тегов из списка обрабатываемых коннектором
+
+        # аналогично методу _create_tag_cache, может быть переписан в классе-наследнике
         for tag_id in mes["data"]["tags"]:
             self._config_from_platfrom.tags.pop(tag_id)
             self._tag_cache.pop(tag_id)
-            for _, tag_group in self._tag_groups.items():
-                if
 
-    async def _message_handler(self):
+            self._logger.info(f"Тег {tag_id} удалён из списка.")
+
+    async def _handle_messages(self):
         try:
+            while not self._mqtt_connected.is_set():
+                await asyncio.sleep(1)
+
             if self._mqtt_client:
                 async for message in self._mqtt_client.messages:
                     message_data = json.loads(str(message.payload))
@@ -332,9 +372,8 @@ class BaseConnector(ABC):
                     password=self._mqtt_parsed_url["password"],
                     tls_params=self._mqtt_parsed_url["tls"]
                 )
+                await self._mqtt_client.subscribe(self._mqtt_topic_messages_from_platform)
                 self._mqtt_connected.set()
-
-                await self._get_full_configuration_from_platform()
 
                 await asyncio.Future()
 
@@ -375,7 +414,7 @@ class BaseConnector(ABC):
         raise NotImplementedError()
 
     @abstractmethod
-    async def _read_tags(self, tags: list[str]) -> dict[str, Any]:
+    async def _read_tags(self) -> dict[str, Any]:
         """Абстрактный метод для чтения тегов из источника"""
         raise NotImplementedError()
 

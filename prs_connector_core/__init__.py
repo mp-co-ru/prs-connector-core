@@ -17,7 +17,7 @@ from .config import (
 )
 from .exceptions import (
     ConnectorBaseError,
-    ConnectionError,
+    PlatformConnectionError,
     ConfigValidationError,
     DataProcessingError,
     PlatformConfigError
@@ -32,7 +32,7 @@ __all__ = [
     'LogConfig',
     'SSLConfig',
     'ConnectorBaseError',
-    'ConnectionError',
+    'PlatformConnectionError',
     'ConfigValidationError',
     'DataProcessingError',
     'PlatformConfigError'

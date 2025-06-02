@@ -9,6 +9,7 @@ jsonata-python = "0.5.3"
 aiomqtt = "2.3.2"
 prs-connector-core = {file = ".", editable = true}
 aiofiles = "24.1.0"
+ciso8601 = "2.3.2"
 
 [dev-packages]
 pytest = "8.3.5"

@@ -11,8 +11,8 @@ from .exceptions import ConfigValidationError
 class SSLConfig(BaseModel):
     certFile: str
     keyFile: str
-    caFile: str
-    certsRequired: int
+    caFile: str = ""
+    certsRequired: int | str = 'CERTS_NONE'
 
     @field_validator('certsRequired', mode='before')
     @classmethod
@@ -22,7 +22,7 @@ class SSLConfig(BaseModel):
             case 'CERTS_OPTIONAL': return 1
             case 'CERTS_REQUIRED': return 2
             case _:
-                raise ConfigValidationError(field='certsRequired', details="certRequuired должен быть `CERTS_NONE`, `CERTS_OPTIONAL` или `CERTS_REQUIRED`")
+                raise ConfigValidationError(field='certsRequired', details="certRequired должен быть `CERTS_NONE`, `CERTS_OPTIONAL` или `CERTS_REQUIRED`")
 
 class LogConfig(BaseModel):
     level: str = "INFO"
@@ -72,6 +72,11 @@ class ConnectorConfig(BaseModel):
 
     @model_validator(mode='after')
     def validate_ssl_requirements(self) -> Self:
+        if not self.url:
+            raise ConfigValidationError(
+                field="url",
+                details=f"Отсутствие поля 'url'."
+            )
         parsed = urlparse(self.url)
         if parsed.scheme == 'mqtts':
             if not self.ssl:
@@ -94,6 +99,8 @@ class ConnectorConfig(BaseModel):
         """Загрузка конфигурации из JSON-файла"""
         try:
             file = Path(config_file)
+            if not file.exists():
+                raise FileNotFoundError(f"Файл не найден: {config_file}")
             return cls.model_validate_json(file.read_text())
 
         except FileNotFoundError as e:
@@ -111,7 +118,7 @@ class ConnectorConfig(BaseModel):
         except ValidationError as e:
             raise ConfigValidationError(
                 field="config_file",
-                details="Ошибка валидации конфигурации"
+                details=f"Ошибка валидации конфигурации: {e}"
             ) from e
 
 class TagAttributes(BaseModel):

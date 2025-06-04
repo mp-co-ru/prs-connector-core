@@ -11,7 +11,6 @@ from .connector import BaseConnector
 from .config import (
     ConnectorConfig,
     PlatformConfig,
-    TagConfig,
     LogConfig,
     SSLConfig
 )
@@ -28,7 +27,6 @@ __all__ = [
     'BaseConnector',
     'ConnectorConfig',
     'PlatformConfig',
-    'TagConfig',
     'LogConfig',
     'SSLConfig',
     'ConnectorBaseError',

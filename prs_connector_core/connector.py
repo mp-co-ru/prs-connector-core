@@ -16,14 +16,12 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from jsonata import Jsonata
-from .config import ConnectorConfig, LogConfig, PlatformConfig, TagAttributes
+from .config import ConnectorConfig, LogConfig, PlatformConfig
 from .exceptions import (
     ConfigValidationError,
-    DataProcessingError,
-    JsonataError,
     PlatformConnectionError
 )
-from times import now_int
+from .times import now_int
 
 class BaseConnector(ABC):
     """Базовый класс коннектора платформы Peresvet"""
@@ -58,6 +56,7 @@ class BaseConnector(ABC):
         # }
         self._tag_cache = {}
 
+        self._logger : logging.Logger = None # type: ignore
         self._setup_logger()
 
         # очередь данных для отправки в платформу
@@ -108,35 +107,42 @@ class BaseConnector(ABC):
             self._create_tag_cache(tag_id)
 
         # соединение с платформой
-        self._connect_to_platform_task = asyncio.create_task(self._connect_to_platform())
+        self._connect_to_platform_task = None
         # соединение с источником данных
-        self._connect_to_source_task = asyncio.create_task(self._connect_to_source())
+        self._connect_to_source_task = None
         # обработка сообщений от платформы
-        self._handle_messages_task = asyncio.create_task(self._handle_messages())
+        self._handle_messages_task = None
         # чтение данных тегов
         #self._read_tags_task = asyncio.create_task(self._read_tags())
         # работа с данными
-        self._push_data_task = asyncio.create_task(self._push_data())
+        self._push_data_task = None
         # работа с буфером
-        self._process_buffer_task = asyncio.create_task(self._process_buffer())
+        self._process_buffer_task = None
+
 
     async def _shutdown(self):
         """Обработчик завершения работы"""
         self._logger.info(f"Получен сигнал завершения работы, сохраняем данные...")
 
-        # остановим все задачи
-        self._connect_to_platform_task.cancel()
-        self._mqtt_connected.clear()
-        self._connect_to_source_task.cancel()
-        self._handle_messages_task.cancel()
-        #self._read_tags_task.cancel()
-        self._process_buffer_task.cancel()
+        # Отменяем все задачи
+        tasks = [
+            self._connect_to_platform_task,
+            self._connect_to_source_task,
+            self._handle_messages_task,
+            self._push_data_task,
+            self._process_buffer_task
+        ]
 
-        while not self._data_queue.empty():
-            await asyncio.sleep(0.1)
-        self._push_data_task.cancel()
+        for task in tasks:
+            if task and not task.done():
+                task.cancel()
 
-        self._loop.stop()
+        # Ожидаем завершения задач
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Закрываем файловые дескрипторы
+        if hasattr(self, '_buf_file') and self._buf_file:
+            await self._buf_file.close()
 
     def _emergency_shutdown(self, message: str) -> None:
         """Аварийное завершение работы при критических ошибках"""
@@ -229,6 +235,9 @@ class BaseConnector(ABC):
         2. Преобразуется к нужному типу
         3. Если разница между последним посланным в платформу значением и текущим больше указанного предела,
            то значение будет помещено в очередь данных.
+        Для тегов с типами данных 2(str) и 4(json) сравнение происходит следующим образом:
+        если maxDev = 0, то в очередь помещается каждое новое значение тега, если maxDev > 0, то в очередь
+        новое значение помещается, только если отличается от последнего записанного.
 
         Args:
             data(dict) - словарь с массивом данных тегов:
@@ -281,19 +290,28 @@ class BaseConnector(ABC):
                             self._logger.exception(f"Тег '{tag_id}'. Ошибка конвертации значения '{new_data_value[0]}' к типу {value_type}")
                             continue
 
-                    if value_type in [0, 1] and max_dev > 0 and abs(last_value - new_data_value[0]):
-                        if new_data_value
+                    if (max_dev == 0 or \
+                        last_value is None or \
+                        value_type in [0, 1] and (max_dev <= abs(last_value - new_data_value[0])) or \
+                        value_type == 2 and last_value != new_data_value[0] or \
+                        value_type == 4 and not self._dicts_are_equal(last_value, new_data_value[0])):
 
-            value = raw_value
-            # Если тег имеет выражение jsonata, то используем его
-            if (expr := self._jsonata_cache.get(tag.tagId)):
-                value = expr.evaluate(raw_value)
-            return self._convert_value(value, tag.attributes.prsValueTypeCode)
+                        new_tag_data["data"].append(new_data_value)
+                        last_value = new_data_value[0]
+
+                if new_tag_data["data"]:
+                    self._tag_cache[tag_id]["last_value"] = last_value
+                    new_data["data"].append(new_tag_data)
+
         except Exception as e:
-            raise JsonataError(
-                tag_id=str(tag.tagId),
-                reason=str(e)
-            ) from e
+            self._logger.exception(f"Ошибка обработки данных: {e}")
+            return
+
+        try:
+            if new_data["data"]:
+                self._data_queue.put_nowait(new_data)
+        except asyncio.QueueFull:
+            self._logger.exception(f"Очередь заполнена сообщениями.")
 
     async def run(self) -> None:
         self._buf_file = await aiofiles.open(self._buf_file_name, mode="+a")
@@ -304,6 +322,19 @@ class BaseConnector(ABC):
             )
 
         try:
+            # соединение с платформой
+            self._connect_to_platform_task = asyncio.create_task(self._connect_to_platform())
+            # соединение с источником данных
+            self._connect_to_source_task = asyncio.create_task(self._connect_to_source())
+            # обработка сообщений от платформы
+            self._handle_messages_task = asyncio.create_task(self._handle_messages())
+            # чтение данных тегов
+            #self._read_tags_task = asyncio.create_task(self._read_tags())
+            # работа с данными
+            self._push_data_task = asyncio.create_task(self._push_data())
+            # работа с буфером
+            self._process_buffer_task = asyncio.create_task(self._process_buffer())
+
             asyncio.gather(
                 self._connect_to_platform_task,
                 self._connect_to_source_task,
@@ -341,19 +372,26 @@ class BaseConnector(ABC):
         # Возвращаем шестнадцатеричное представление хэша
         return hasher.digest()
 
+    @classmethod
+    def _dicts_are_equal(cls, d1: dict, d2: dict) -> bool:
+        d1_hash = cls._hash_dict(d1)
+        d2_hash = cls._hash_dict(d2)
+        return d1_hash == d2_hash
+
     async def _get_connector_configuration_from_platform(self, mes: dict):
         config_changed = False
 
-        old_log_config_hash = self._hash_dict(self._config_from_platfrom.prsJsonConfigString.log.model_dump())
-        new_log_config_hash = self._hash_dict(mes["data"]["prsJsonConfigString"]["log"])
-        if old_log_config_hash != new_log_config_hash:
+        if not self._dicts_are_equal(
+               self._config_from_platfrom.prsJsonConfigString.log.model_dump(),
+               mes["data"]["prsJsonConfigString"]["log"]):
             self._config_from_platfrom.prsJsonConfigString.log = LogConfig(**mes["data"]["prsJsonConfigString"]["log"])
             self._setup_logger()
             config_changed = True
 
-        old_source_cofig_hash = self._hash_dict(self._config_from_platfrom.prsJsonConfigString.source)
-        new_source_cofig_hash = self._hash_dict(mes["data"]["prsJsonConfigString"]["source"])
-        if old_source_cofig_hash != new_source_cofig_hash:
+        if not self._dicts_are_equal(
+                self._config_from_platfrom.prsJsonConfigString.source,
+                mes["data"]["prsJsonConfigString"]["source"]
+            ):
             self._config_from_platfrom.prsJsonConfigString.source = copy.deepcopy(mes["data"]["prsJsonConfigString"]["source"])
             self._source_pool = await self._connect_to_source()
             config_changed = True
@@ -421,8 +459,8 @@ class BaseConnector(ABC):
                 pass
 
     def _setup_logger(self):
-        self._logger.handlers.clear()
         self._logger = logging.getLogger(f"prs_connector_{self._config_from_file.id}")
+        self._logger.handlers.clear()
         self._logger.setLevel(self._config_from_platfrom.prsJsonConfigString.log.level)
 
         formatter = logging.Formatter(

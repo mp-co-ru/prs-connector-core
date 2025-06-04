@@ -1,9 +1,10 @@
-from typing import Any
-import pytest
 from uuid import uuid4
 from prs_connector_core.config import PlatformConfig, ConnectorPrsJsonConfigStringFromPlatform
 
 def test_platform_config_from_file():
-    plt_config = PlatformConfig.from_file(uuid4())
-    assert plt_config.prsJsonConfigString == ConnectorPrsJsonConfigStringFromPlatform()
-    assert plt_config.tags == []
+    connector_id = str(uuid4())
+    plt_config = PlatformConfig.from_file(connector_id=connector_id)
+    con_json_config_str = ConnectorPrsJsonConfigStringFromPlatform()
+    con_json_config_str.log.fileName = f"logs/prs_connector_{connector_id}.log"
+    assert plt_config.prsJsonConfigString == con_json_config_str
+    assert plt_config.tags == {}

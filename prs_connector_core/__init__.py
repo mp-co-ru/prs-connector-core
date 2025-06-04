@@ -11,13 +11,12 @@ from .connector import BaseConnector
 from .config import (
     ConnectorConfig,
     PlatformConfig,
-    TagConfig,
     LogConfig,
     SSLConfig
 )
 from .exceptions import (
     ConnectorBaseError,
-    ConnectionError,
+    PlatformConnectionError,
     ConfigValidationError,
     DataProcessingError,
     PlatformConfigError
@@ -28,11 +27,10 @@ __all__ = [
     'BaseConnector',
     'ConnectorConfig',
     'PlatformConfig',
-    'TagConfig',
     'LogConfig',
     'SSLConfig',
     'ConnectorBaseError',
-    'ConnectionError',
+    'PlatformConnectionError',
     'ConfigValidationError',
     'DataProcessingError',
     'PlatformConfigError'

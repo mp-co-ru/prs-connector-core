@@ -8,8 +8,14 @@ class ConnectorBaseError(Exception):
         super().__init__(message)
         self.message = message
 
-class ConnectionError(ConnectorBaseError):
-    """Ошибка соединения с платформой или источником данных"""
+class PlatformConnectionError(ConnectorBaseError):
+    """Ошибка соединения с платформой"""
+    def __init__(self, target: str):
+        message = f"Не удалось подключиться к {target}"
+        super().__init__(message)
+
+class SourceConnectionError(ConnectorBaseError):
+    """Ошибка соединения с источником данных"""
     def __init__(self, target: str):
         message = f"Не удалось подключиться к {target}"
         super().__init__(message)

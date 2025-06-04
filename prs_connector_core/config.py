@@ -1,28 +1,46 @@
-from pydantic import BaseModel, UUID4, field_validator, model_validator, Field, ValidationError
+from pydantic import BaseModel, field_validator, model_validator, Field, ValidationError
 from pathlib import Path
+from jsonata import Jsonata
 import uuid
 import json
 from urllib.parse import urlparse
+from typing import Any
 from typing_extensions import Self
 from .exceptions import ConfigValidationError
 
 class SSLConfig(BaseModel):
     certFile: str
     keyFile: str
-    certPassword: str | None = None
+    caFile: str = ""
+    certsRequired: int | str = 'CERTS_NONE'
+
+    @field_validator('certsRequired', mode='before')
+    @classmethod
+    def validate_id(cls, v: str) -> int:
+        match v:
+            case 'CERTS_NONE': return 0
+            case 'CERTS_OPTIONAL': return 1
+            case 'CERTS_REQUIRED': return 2
+            case _:
+                raise ConfigValidationError(field='certsRequired', details="certRequired должен быть `CERTS_NONE`, `CERTS_OPTIONAL` или `CERTS_REQUIRED`")
 
 class LogConfig(BaseModel):
     level: str = "INFO"
-    fileName: str = "logs/connector.log"
+    fileName: str = "logs/prs_connector.log"
     maxBytes: int = 10 * 1024 * 1024  # 10MB
     backupCount: int = 10
 
-class ConfigStringPlatform(BaseModel):
-    source: dict
-    log: LogConfig
+class ConnectorPrsJsonConfigStringFromPlatform(BaseModel):
+    source: dict = {}
+    log: LogConfig = LogConfig()
+
+class TagPrsJsonConfigStringFromPlatform(BaseModel):
+    source: dict = {}
+    maxDev: float = 0
+    JSONata: str | None = None
 
 class ConnectorConfig(BaseModel):
-    id: UUID4
+    id: str
     url: str
     ssl: SSLConfig | None = None
 
@@ -52,9 +70,13 @@ class ConnectorConfig(BaseModel):
 
         return v
 
-
     @model_validator(mode='after')
     def validate_ssl_requirements(self) -> Self:
+        if not self.url:
+            raise ConfigValidationError(
+                field="url",
+                details=f"Отсутствие поля 'url'."
+            )
         parsed = urlparse(self.url)
         if parsed.scheme == 'mqtts':
             if not self.ssl:
@@ -76,18 +98,14 @@ class ConnectorConfig(BaseModel):
     def from_file(cls, config_file: str) -> Self:
         """Загрузка конфигурации из JSON-файла"""
         try:
-            '''
-            with open(config_file, "r") as f:
-                config_data = json.load(f)
-            return cls.model_validate(config_data)
-            '''
-
-            if (file := Path(config_file)).exists():
-                return cls.model_validate_json(file.read_text())
+            file = Path(config_file)
+            if not file.exists():
+                raise FileNotFoundError(f"Файл не найден: {config_file}")
+            return cls.model_validate_json(file.read_text())
 
         except FileNotFoundError as e:
             raise ConfigValidationError(
-                field="config_file",
+                field='config_file',
                 details=f"Файл конфигурации не найден: {config_file}"
             ) from e
 
@@ -98,29 +116,46 @@ class ConnectorConfig(BaseModel):
             ) from e
 
         except ValidationError as e:
-            raise ConfigValidationError.from_pydantic(e) from e
+            raise ConfigValidationError(
+                field="config_file",
+                details=f"Ошибка валидации конфигурации: {e}"
+            ) from e
 
 class TagAttributes(BaseModel):
-    prsMaxLineDev: float | None = None
+    # приходит от платформы
     prsValueTypeCode: int = Field(..., ge=1, le=4)
-    prsJsonConfigString: dict
-    prsJSONata: str
-
-class TagConfig(BaseModel):
-    tagId: UUID4
-    attributes: TagAttributes | None = None
+    prsJsonConfigString: TagPrsJsonConfigStringFromPlatform
 
 class PlatformConfig(BaseModel):
-    prsJsonConfigString: ConfigStringPlatform | None = None
-    tags: list[TagConfig] = []
+    prsJsonConfigString: ConnectorPrsJsonConfigStringFromPlatform = ConnectorPrsJsonConfigStringFromPlatform()
+    tags: dict[str, TagAttributes] = {}
+
+    @field_validator('tags', mode='before')
+    @classmethod
+    def validate_tags_id(cls, v: dict[str, TagAttributes]) -> dict[str, TagAttributes]:
+
+        for k in v.keys():
+            try:
+                uuid.UUID(str(k))
+            except ValueError as e:
+                raise ConfigValidationError(field='tags', details=f"id тега должен быть в виде GUID: {k}")
+
+        return v
 
     @classmethod
-    def from_file(cls, connector_id: UUID4) -> Self:
-        if (config_file := Path(f"platform_{connector_id}.json")).exists():
-            return cls.model_validate_json(config_file.read_text())
-        return PlatformConfig()
+    def _form_file_name(cls, connector_id: str) -> str:
+        return f"platform_config_{connector_id}.json"
 
-    def save(self, connector_id: UUID4) -> None:
-        Path(f"platform_{connector_id}.json").write_text(
+    @classmethod
+    def from_file(cls, connector_id: str) -> Self:
+        if (config_file := Path(cls._form_file_name(connector_id=connector_id))).exists():
+            new_inst = cls.model_validate_json(config_file.read_text())
+        else:
+            new_inst = cls()
+        new_inst.prsJsonConfigString.log.fileName = f"logs/prs_connector_{connector_id}.log"
+        return new_inst
+
+    def save(self, connector_id: str) -> None:
+        Path(self._form_file_name(connector_id=connector_id)).write_text(
             self.model_dump_json(indent=2, exclude_unset=True)
         )

@@ -39,9 +39,6 @@ class BaseConnector(ABC):
         # Инициализация клиента MQTT
         self._mqtt_client : aiomqtt.Client | None = None
 
-        # Пул соединений к источнику данных
-        self._source_pool = None
-
         # Инициализация конфигурации от платформы
         self._config_from_platfrom : PlatformConfig = PlatformConfig.from_file(self._config_from_file.id)
 

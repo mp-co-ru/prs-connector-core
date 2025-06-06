@@ -106,14 +106,10 @@ class BaseConnector(ABC):
         for tag_id in self._config_from_platfrom.tags.keys():
             self._create_tag_cache(tag_id)
 
-        # соединение с платформой
-        self._connect_to_platform_task = None
-        # соединение с источником данных
-        self._connect_to_source_task = None
         # обработка сообщений от платформы
         self._handle_messages_task = None
         # чтение данных тегов
-        #self._read_tags_task = asyncio.create_task(self._read_tags())
+        self._read_tags_task = None
         # работа с данными
         self._push_data_task = None
         # работа с буфером
@@ -126,11 +122,10 @@ class BaseConnector(ABC):
 
         # Отменяем все задачи
         tasks = [
-            self._connect_to_platform_task,
-            self._connect_to_source_task,
             self._handle_messages_task,
             self._push_data_task,
-            self._process_buffer_task
+            self._process_buffer_task,
+            self._read_tags_task
         ]
 
         for task in tasks:
@@ -153,19 +148,22 @@ class BaseConnector(ABC):
     async def _push_data(self):
         # берём из очереди сообщение и пытаемся отправить его в платформу
         # при неудаче сохраняем в буфер
+        async def write_to_buf(mes):
+            async with self._buf_file_lock:
+                    await self._buf_file.write(mes) # type: ignore
+
         while True:
             mes = await self._data_queue.get()
             try:
+                new_mes = self._process_tags_data(mes)
+
                 if self._mqtt_connected.is_set():
-                    await self._mqtt_client.publish(topic="prsTag.app_api.data_set.*", payload=mes, qos=1) # type: ignore
+                    await self._mqtt_client.publish(topic="prsTag/app_api/data_set/*", payload=new_mes, qos=1) # type: ignore
                 else:
-                    raise PlatformConnectionError("Not connected")
-            except (PlatformConnectionError, aiomqtt.MqttError) as ex:
-                if isinstance(ex, aiomqtt.MqttError):
-                    # произошла ошибка разрыва связи с платформой во время отправки сообщения в платформу
-                    self._logger.exception("Разрыв связи с платформой.")
-                async with self._buf_file_lock:
-                    await self._buf_file.write(mes) # type: ignore
+                    await write_to_buf(new_mes)
+            except (aiomqtt.MqttError) as ex:
+                await write_to_buf(mes)
+                self._mqtt_connected.clear()
 
     async def _process_buffer(self):
         while True:
@@ -199,33 +197,7 @@ class BaseConnector(ABC):
 
             await asyncio.sleep(10)
 
-    async def _connect_to_platform(self) -> None:
-        """Подключение к платформе. При обрыве связи делаются попытки её восстановить."""
-        while True:
-            try:
-                self._mqtt_client = aiomqtt.Client(
-                    identifier=self._config_from_file.id,
-                    protocol=aiomqtt.ProtocolVersion.V5,
-                    hostname=self._mqtt_parsed_url["host"],
-                    port=self._mqtt_parsed_url["port"],
-                    username=self._mqtt_parsed_url["user"],
-                    password=self._mqtt_parsed_url["password"],
-                    tls_params=self._mqtt_parsed_url["tls"]
-                )
-                await self._mqtt_client.subscribe(self._mqtt_topic_messages_from_platform)
-                self._mqtt_connected.set()
-
-                # обработаем буфер
-                await self._process_buffer()
-
-                await asyncio.Future()
-
-            except aiomqtt.MqttError as e:
-                self._mqtt_connected.clear()
-                self._logger.error(f"Ошибка подключения к платформе: {e}")
-                await asyncio.sleep(5)
-
-    def _process_tags_data(self, data: dict) -> None:
+    def _process_tags_data(self, data: dict) -> dict:
         """Метод обрабатывает "сырые" данные.
         Логика работы.
         На вход метода приходит массив данных, в том виде, как описано в API.
@@ -251,13 +223,14 @@ class BaseConnector(ABC):
                 }
 
         Returns:
-            None
+            dict - обработанные данные
         """
+        new_data = {
+            "data": []
+        }
+
         try:
             cur_time = now_int()
-            new_data = {
-                "data": []
-            }
             for tag in data["data"]:
                 tag_id = tag["tagId"]
                 new_tag_data = {
@@ -305,13 +278,8 @@ class BaseConnector(ABC):
 
         except Exception as e:
             self._logger.exception(f"Ошибка обработки данных: {e}")
-            return
 
-        try:
-            if new_data["data"]:
-                self._data_queue.put_nowait(new_data)
-        except asyncio.QueueFull:
-            self._logger.exception(f"Очередь заполнена сообщениями.")
+        return new_data
 
     async def run(self) -> None:
         self._buf_file = await aiofiles.open(self._buf_file_name, mode="+a")
@@ -321,31 +289,38 @@ class BaseConnector(ABC):
                 sig, lambda: asyncio.create_task(self._shutdown())
             )
 
-        try:
-            # соединение с платформой
-            self._connect_to_platform_task = asyncio.create_task(self._connect_to_platform())
-            # соединение с источником данных
-            self._connect_to_source_task = asyncio.create_task(self._connect_to_source())
-            # обработка сообщений от платформы
-            self._handle_messages_task = asyncio.create_task(self._handle_messages())
-            # чтение данных тегов
-            #self._read_tags_task = asyncio.create_task(self._read_tags())
-            # работа с данными
-            self._push_data_task = asyncio.create_task(self._push_data())
-            # работа с буфером
-            self._process_buffer_task = asyncio.create_task(self._process_buffer())
+        # обработка сообщений от платформы
+        self._handle_messages_task = asyncio.create_task(self._handle_messages())
+        # чтение данных тегов
+        self._read_tags_task = asyncio.create_task(self._read_tags())
+        # работа с данными
+        self._push_data_task = asyncio.create_task(self._push_data())
+        # работа с буфером
+        self._process_buffer_task = asyncio.create_task(self._process_buffer())
 
-            asyncio.gather(
-                self._connect_to_platform_task,
-                self._connect_to_source_task,
-                self._handle_messages_task,
-                #self._read_tags_task,
-                self._push_data_task,
-                self._process_buffer_task
-            )
+        while True:
+            try:
+                async with aiomqtt.Client(
+                    identifier=self._config_from_file.id,
+                    protocol=aiomqtt.ProtocolVersion.V5,
+                    hostname=self._mqtt_parsed_url["host"],
+                    port=self._mqtt_parsed_url["port"],
+                    username=self._mqtt_parsed_url["user"],
+                    password=self._mqtt_parsed_url["password"],
+                    tls_params=self._mqtt_parsed_url["tls"]
+                ) as client:
+                    self._mqtt_client = client
+                    await self._mqtt_client.subscribe(self._mqtt_topic_messages_from_platform)
+                    self._mqtt_connected.set()
 
-        except aiomqtt.MqttError as e:
-            self._logger.exception(f"Ошибка подключения: {e}")
+                    while self._mqtt_connected.is_set():
+                        await asyncio.sleep(5)
+
+                    self._logger.exception(f"Разрыв связи с платформой.")
+
+            except aiomqtt.MqttError as e:
+                self._mqtt_connected.clear()
+                self._logger.exception(f"Разрыв связи с платформой: {e}")
 
     async def _get_full_configuration_from_platform(self, mes: dict):
         new_mes = {
@@ -393,8 +368,11 @@ class BaseConnector(ABC):
                 mes["data"]["prsJsonConfigString"]["source"]
             ):
             self._config_from_platfrom.prsJsonConfigString.source = copy.deepcopy(mes["data"]["prsJsonConfigString"]["source"])
-            self._source_pool = await self._connect_to_source()
             config_changed = True
+            if self._read_tags_task and not self._read_tags_task.done():
+                self._read_tags_task.cancel()
+                await asyncio.gather(self._read_tags())
+            self._read_tags_task = asyncio.create_task(self._read_tags())
 
         if config_changed:
             self._config_from_platfrom.save(self._config_from_file.id)
@@ -455,8 +433,8 @@ class BaseConnector(ABC):
                             case "prsConnector.tags_deleted":
                                 await self._tags_deleted(message_data)
 
-            except:
-                pass
+            except aiomqtt.MqttError:
+                self._mqtt_connected.clear()
 
     def _setup_logger(self):
         self._logger = logging.getLogger(f"prs_connector_{self._config_from_file.id}")
@@ -484,9 +462,8 @@ class BaseConnector(ABC):
         console_handler.setFormatter(formatter)
         self._logger.addHandler(console_handler)
 
-
     # ------------------------------------------------------------------------------------------------------------------
-    # методы, которые можно переопределять в классах-неследниках
+    # методы, которые можно переопределять в классах-наследниках
 
     def _create_tag_cache(self, tag_id: str):
         # в случае, если требуется кэш другого вида, необходимо переопределить
@@ -512,11 +489,6 @@ class BaseConnector(ABC):
         # то данный метод необходимо переопределить в классе-наследнике
         # и вызвать данный метод
         self._tag_cache.pop(tag_id)
-
-    @abstractmethod
-    async def _connect_to_source(self) -> None:
-        """Абстрактный метод для подключения к источнику данных"""
-        raise NotImplementedError()
 
     @abstractmethod
     async def _read_tags(self) -> dict[str, Any]:

@@ -100,9 +100,6 @@ class BaseConnector(ABC):
         except:
             self._emergency_shutdown("Ошибка загрузки сертификатов.")
 
-        for tag_id in self._config_from_platfrom.tags.keys():
-            self._create_tag_cache(tag_id)
-
         # обработка сообщений от платформы
         self._handle_messages_task = None
         # чтение данных тегов
@@ -279,6 +276,10 @@ class BaseConnector(ABC):
         return new_data
 
     async def run(self) -> None:
+
+        for tag_id in self._config_from_platfrom.tags.keys():
+            await self._create_tag_cache(tag_id)
+
         self._buf_file = await aiofiles.open(self._buf_file_name, mode="+a")
 
         for sig in [signal.SIGINT, signal.SIGTERM]:
@@ -388,7 +389,7 @@ class BaseConnector(ABC):
                 if old_tag_hash != new_tag_hash:
                     add_tag = True
                     self._config_from_platfrom.tags.pop(tag_id)
-                    self._remove_tag_cache(tag_id)
+                    await self._remove_tag_cache(tag_id)
 
             else:
                 add_tag = True
@@ -396,7 +397,7 @@ class BaseConnector(ABC):
             if add_tag:
                 config_changed = True
                 self._config_from_platfrom.tags[tag_id] = tag_data
-                self._create_tag_cache(tag_id)
+                await self._create_tag_cache(tag_id)
 
         if config_changed:
             self._config_from_platfrom.save(self._config_from_file.id)
@@ -408,7 +409,7 @@ class BaseConnector(ABC):
         # аналогично методу _create_tag_cache, может быть переписан в классе-наследнике
         for tag_id in mes["data"]["tags"]:
             self._config_from_platfrom.tags.pop(tag_id)
-            self._remove_tag_cache(tag_id)
+            await self._remove_tag_cache(tag_id)
 
             self._logger.info(f"Тег {tag_id} удалён из списка.")
 
@@ -462,7 +463,7 @@ class BaseConnector(ABC):
     # ------------------------------------------------------------------------------------------------------------------
     # методы, которые можно переопределять в классах-наследниках
 
-    def _create_tag_cache(self, tag_id: str):
+    async def _create_tag_cache(self, tag_id: str):
         # в случае, если требуется кэш другого вида, необходимо переопределить
         # данный метод в классе-наследнике,
         # при этом из переопределённого метода необходимо вызвать данный метод
@@ -481,7 +482,7 @@ class BaseConnector(ABC):
         except:
             self._logger.exception(f"Тег {tag_id}. Ошибка создания JSONata выражения '{expr}'")
 
-    def _remove_tag_cache(self, tag_id: str):
+    async def _remove_tag_cache(self, tag_id: str):
         # если при удалении из конфигурации тега необходимо выполнить дополнительные действия, то
         # то данный метод необходимо переопределить в классе-наследнике
         # и вызвать данный метод

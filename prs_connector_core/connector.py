@@ -489,7 +489,7 @@ class BaseConnector(ABC):
         self._tag_cache.pop(tag_id)
 
     @abstractmethod
-    async def _read_tags(self) -> dict[str, Any]:
+    async def _read_tags(self):
         """Абстрактный метод для чтения тегов из источника"""
         raise NotImplementedError()
 

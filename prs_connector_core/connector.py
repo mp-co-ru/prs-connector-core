@@ -381,7 +381,7 @@ class BaseConnector(ABC):
             config_changed = True
             if self._read_tags_task and not self._read_tags_task.done():
                 self._read_tags_task.cancel()
-                await asyncio.gather(self._read_tags())
+                await asyncio.gather(self._read_tags_task)
                 self._read_tags_task = None
 
         if mes["data"]["prsActive"] and self._read_tags_task is None:
@@ -454,9 +454,17 @@ class BaseConnector(ABC):
                                 await self._tags_add_or_changed(message_data)
                             case "prsConnector.tags_deleted":
                                 await self._tags_deleted(message_data)
+                            case "prsConnector.deleted":
+                                await self._deleted(message_data)
 
             except aiomqtt.MqttError:
                 self._mqtt_connected.clear()
+
+    async def _deleted(self, message_data):
+        self._config_from_platfrom.prsActive = False
+        self._config_from_platfrom.save(self._config_from_file.id)
+        self._logger.info(f"Коннектор удалён из иерархии.")
+        await self._shutdown()
 
     def _setup_logger(self):
         self._logger = logging.getLogger(f"prs_connector_{self._config_from_file.id}")

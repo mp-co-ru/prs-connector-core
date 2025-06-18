@@ -71,7 +71,7 @@ class BaseConnector(ABC):
         parsed_url = urlparse(self._config_from_file.url)
 
         # топик, в который платформа будет посылать сообщения для коннектора
-        self._mqtt_topic_messages_from_platform = f"connector/{self._config_from_file.id}"
+        self._mqtt_topic_messages_from_platform = f"prs2conn/{self._config_from_file.id}"
 
         self._mqtt_parsed_url = {
             "host": parsed_url.hostname,
@@ -309,6 +309,16 @@ class BaseConnector(ABC):
                     self._mqtt_client = client
                     await self._mqtt_client.subscribe(self._mqtt_topic_messages_from_platform)
                     self._mqtt_connected.set()
+                    payload = {
+                        "action": "getConfig",
+                        "data": {
+                            "id": self._config_from_file.id
+                        }
+                    }
+                    await client.publish(
+                        f"conn2prs/{self._config_from_file.id}",
+                        payload=json.dumps(payload)
+                    )
 
                     while self._mqtt_connected.is_set():
                         await asyncio.sleep(5)

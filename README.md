@@ -132,6 +132,8 @@ $ pytest
 {
     "action": "prsConnector.connector_configuration",
     "data": {
+        "prsActive": true,
+        "prsEntityTypeCode": null,
         "prsJsonConfigString": {
             "source": {},
             "log": {
@@ -141,6 +143,17 @@ $ pytest
                 "backupCount": 10
             }
         }
+    }
+}
+```
+
+### Удаление коннектора
+Коннектор получает это сообщение в случае, когда он удалён из иерархии.
+```json
+{
+    "action": "prsConnector.deleted",
+    "data": {
+        "id": "<UUID>"
     }
 }
 ```

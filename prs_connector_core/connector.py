@@ -109,7 +109,6 @@ class BaseConnector(ABC):
         # работа с буфером
         self._process_buffer_task = None
 
-
     async def _shutdown(self):
         """Обработчик завершения работы"""
         self._logger.info(f"Получен сигнал завершения работы, сохраняем данные...")

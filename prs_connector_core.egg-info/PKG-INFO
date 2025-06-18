@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: prs_connector_core
-Version: 0.1.1
+Version: 0.1.2
 Summary: Базовый модуль для коннекторов платформы Пересвет
 Author-email: ООО МПК <info@mp-co.ru>
 License: Apache-2.0

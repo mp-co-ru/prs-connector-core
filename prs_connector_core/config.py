@@ -127,6 +127,8 @@ class TagAttributes(BaseModel):
     prsJsonConfigString: TagPrsJsonConfigStringFromPlatform
 
 class PlatformConfig(BaseModel):
+    prsActive: bool = True
+    prsEntityTypeCode: int | None = None
     prsJsonConfigString: ConnectorPrsJsonConfigStringFromPlatform = ConnectorPrsJsonConfigStringFromPlatform()
     tags: dict[str, TagAttributes] = {}
 

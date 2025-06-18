@@ -289,7 +289,8 @@ class BaseConnector(ABC):
         # обработка сообщений от платформы
         self._handle_messages_task = asyncio.create_task(self._handle_messages())
         # чтение данных тегов
-        self._read_tags_task = asyncio.create_task(self._read_tags())
+        if self._config_from_platfrom.prsActive:
+            self._read_tags_task = asyncio.create_task(self._read_tags())
         # работа с данными
         self._push_data_task = asyncio.create_task(self._push_data())
         # работа с буфером
@@ -332,6 +333,8 @@ class BaseConnector(ABC):
     async def _get_full_configuration_from_platform(self, mes: dict):
         new_mes = {
             "data": {
+                "prsActive": mes["data"]["prsActive"],
+                "prsEntityTypeCode": mes["data"]["prsEntityTypeCode"],
                 "prsJsonConfigString": mes["data"]["prsJsonConfigString"]
             }
         }
@@ -379,7 +382,19 @@ class BaseConnector(ABC):
             if self._read_tags_task and not self._read_tags_task.done():
                 self._read_tags_task.cancel()
                 await asyncio.gather(self._read_tags())
+                self._read_tags_task = None
+
+        if mes["data"]["prsActive"] and self._read_tags_task is None:
             self._read_tags_task = asyncio.create_task(self._read_tags())
+
+        if mes["data"]["prsActive"] != self._config_from_platfrom.prsActive:
+            self._config_from_platfrom.prsActive = mes["data"]["prsActive"]
+            config_changed = True
+
+        if mes["data"]["prsEntityTypeCode"] != self._config_from_platfrom.prsEntityTypeCode:
+            self._config_from_platfrom.prsEntityTypeCode = mes["data"]["prsEntityTypeCode"]
+            # TODO: необходимо вызывать метод _entity_type_code_changed, но его пока нет.
+            config_changed = True
 
         if config_changed:
             self._config_from_platfrom.save(self._config_from_file.id)

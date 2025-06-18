@@ -89,6 +89,8 @@ $ pytest
 {
     "action": "prsConnector.full_configuration",
     "data": {
+        "prsActive": true,
+        "prsEntityTypeCode": null,
         "prsJsonConfigString": {
             "source": {},
             "log": {

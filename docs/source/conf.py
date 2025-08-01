@@ -14,7 +14,12 @@ release = '0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = []
+extensions = [
+    'sphinx.ext.autodoc',
+    'sphinxcontrib.httpdomain',
+    'sphinxcontrib.httpexample',
+    'sphinx.ext.todo',
+]
 
 templates_path = ['_templates']
 exclude_patterns = []
@@ -24,5 +29,11 @@ language = 'ru'
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
+html_favicon = "_static/peresvet_middle.png"
+html_logo = "pics/logo.png"
+#html_theme_options = {
+#    'logo_only': True,
+#    'display_version': True,
+#}

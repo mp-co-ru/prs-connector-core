@@ -6,11 +6,20 @@
 prs-connector-core
 ==================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+**prs-connector-core** - пакет для языка Python.
+
+Главный класс, экспортируемый пакетом - ``BaseConnector``.
+Этот класс реализует функциональность, общую для всех коннекторов платформы Пересвет_.
+
+.. _Пересвет: https://github.com/mp-co-ru/peresvet
 
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Содержание:
+
+   Описание<description>
+   Регистрация коннектора в платформе<registration>
+   Логика работы коннектора<work_logic>
+   Формат сообщений<message_format>
+   Разработка нового коннектора<create_new_connector>

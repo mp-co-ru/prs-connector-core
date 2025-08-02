@@ -19,6 +19,7 @@ extensions = [
     'sphinxcontrib.httpdomain',
     'sphinxcontrib.httpexample',
     'sphinx.ext.todo',
+    'sphinx_togglebutton'
 ]
 
 templates_path = ['_templates']
@@ -37,3 +38,5 @@ html_logo = "pics/logo.png"
 #    'logo_only': True,
 #    'display_version': True,
 #}
+togglebutton_hint = ""
+togglebutton_hint_hide = ""

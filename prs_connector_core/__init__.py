@@ -21,6 +21,12 @@ from .exceptions import (
     DataProcessingError,
     PlatformConfigError
 )
+from .times import (
+    ts,
+    int_to_local_timestamp,
+    ts_to_local_str,
+    now_int
+)
 from typing_extensions import Self
 __all__ = [
     'Self',
@@ -33,7 +39,11 @@ __all__ = [
     'PlatformConnectionError',
     'ConfigValidationError',
     'DataProcessingError',
-    'PlatformConfigError'
+    'PlatformConfigError',
+    'ts',
+    'int_to_local_timestamp',
+    'ts_to_local_str',
+    'now_int'
 ]
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

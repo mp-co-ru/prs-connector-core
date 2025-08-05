@@ -143,12 +143,18 @@ class BaseConnector(ABC):
         # при неудаче сохраняем в буфер
         async def write_to_buf(mes):
             async with self._buf_file_lock:
-                    await self._buf_file.write(mes) # type: ignore
+                s = json.dumps(mes)
+                await self._buf_file.write(s) # type: ignore
 
         while True:
             mes = await self._data_queue.get()
             try:
-                new_mes = self._process_tags_data(mes)
+                # при помещении сообщения из буфера в очередь мы помечаем его как уже обработанное
+                processed = mes.get("processed", False)
+                if not processed:
+                    new_mes = self._process_tags_data(mes)
+                else:
+                    new_mes = mes
 
                 if self._mqtt_connected.is_set():
                     await self._mqtt_client.publish(topic="prsTag/app_api/data_set/*", payload=new_mes, qos=1) # type: ignore
@@ -176,8 +182,9 @@ class BaseConnector(ABC):
                             # переименовываем временный файл в файл буфера
                             await tmp_file.write(line)
                         try:
-                            # TODO: ошибка! данные в очереди опять будут обрабатываться методом _process_tag_data!
-                            self._data_queue.put_nowait(line)
+                            js = json.loads(line)
+                            js["processed"] = True
+                            self._data_queue.put_nowait(js)
                         except asyncio.QueueFull as _:
                             if not queue_full:
                                 self._logger.exception("Очередь сообщений переполнена.")

@@ -10,7 +10,6 @@ aiomqtt = "2.3.2"
 prs-connector-core = {file = ".", editable = true}
 aiofiles = "24.1.0"
 ciso8601 = "2.3.2"
-setuptools = "80.9.0"
 
 [dev-packages]
 pytest = "8.3.5"
@@ -25,6 +24,10 @@ docutils = "0.21.2"
 ghp-import = "2.1.0"
 pytest-asyncio = "0.26.0"
 build = "1.2.2.post1"
+setuptools = "80.9.0"
+wheel = "0.45.1"
+twine = ">=6.1.0"
+packaging = "==25.0"
 
 [requires]
 python_version = "3.12"

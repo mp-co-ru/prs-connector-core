@@ -23,3 +23,4 @@ prs-connector-core
    Логика работы коннектора<work_logic>
    Формат сообщений<message_format>
    Разработка нового коннектора<create_new_connector>
+   Класс BaseConnector<baseconnector_class>

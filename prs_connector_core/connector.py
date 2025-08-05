@@ -176,6 +176,7 @@ class BaseConnector(ABC):
                             # переименовываем временный файл в файл буфера
                             await tmp_file.write(line)
                         try:
+                            # TODO: ошибка! данные в очереди опять будут обрабатываться методом _process_tag_data!
                             self._data_queue.put_nowait(line)
                         except asyncio.QueueFull as _:
                             if not queue_full:

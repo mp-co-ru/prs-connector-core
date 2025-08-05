@@ -28,7 +28,7 @@ dependencies = [
 [project.urls]
 Homepage = "https://github.com/mp-co-ru/prs-connector-core"
 Repository = "https://github.com/mp-co-ru/prs-connector-core"
-Documentation = "https://github.com/mp-co-ru/prs-connector-core"
+Documentation = "https://mp-co-ru.github.io/prs-connector-core/"
 
 [tool.setuptools]
 include-package-data = true

@@ -123,6 +123,7 @@ class ConnectorConfig(BaseModel):
 
 class TagAttributes(BaseModel):
     # приходит от платформы
+    prsActive: bool = Field(True)
     prsValueTypeCode: int = Field(..., ge=1, le=4)
     prsJsonConfigString: TagPrsJsonConfigStringFromPlatform
 

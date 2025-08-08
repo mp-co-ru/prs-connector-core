@@ -508,6 +508,10 @@ class BaseConnector(ABC):
         # данный метод в классе-наследнике,
         # при этом из переопределённого метода необходимо вызвать данный метод
 
+        if not self._config_from_platfrom.tags[tag_id].prsActive:
+            # если тег неактивен, не создаём для него кэша
+            return
+
         self._tag_cache[tag_id] = {
             "last_value": None,
             "JSONataExpr": None

@@ -24,3 +24,4 @@ prs-connector-core
    Формат сообщений<message_format>
    Разработка нового коннектора<create_new_connector>
    Класс BaseConnector<baseconnector_class>
+   Класс TagGroupReaderConnector<taggroupreaderconnector_class>

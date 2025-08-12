@@ -5,21 +5,21 @@ import hashlib
 import logging.handlers
 import ssl
 import asyncio
-from typing import Any
 import signal
 import logging
 import aiofiles.os
 import aiomqtt
 import aiofiles
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from urllib.parse import urlparse
+from collections import defaultdict
 
 from jsonata import Jsonata
 from .config import ConnectorConfig, LogConfig, PlatformConfig
 from .exceptions import (
-    ConfigValidationError,
-    PlatformConnectionError
+    ConfigValidationError
 )
 from .times import now_int
 
@@ -389,7 +389,7 @@ class BaseConnector(ABC):
             config_changed = True
             if self._read_tags_task and not self._read_tags_task.done():
                 self._read_tags_task.cancel()
-                await asyncio.gather(self._read_tags_task)
+                await asyncio.gather(*self._read_tags_task)
                 self._read_tags_task = None
 
         if mes["data"]["prsActive"] and self._read_tags_task is None:
@@ -538,3 +538,89 @@ class BaseConnector(ABC):
         raise NotImplementedError()
 
     #--------------------------------------------------------------------------------------------------------------------
+
+class TagGroupReaderConnector(BaseConnector):
+    """Класс коннектора, который читает данные из источника сам (не по подписке на события),
+    при этом у каждого тега может быть своя частота чтения.
+    Соответственно, у каждого тега в атрибуте prsJsonConfigString["source"] должен быть ключ frequency, тип - float,
+    значение - частота чтения в секундах. Если указанного атрибута нет, значение по умолчанию принимается 5 сек.
+
+    Коннектор формирует дополнительный кэш в атрибуте _frequency_groups:
+
+    {
+        <frequency>: {
+            "tags": [<tag_id_1>, <tag_id_2>]
+        }
+    }
+
+    Поэтому коннектор формирует группы тегов, при этом у каждой группы - своя частота чтения.
+
+    Args:
+        BaseConnector (_type_): _description_
+    """
+
+    def __init__(self, config_file: str = "config.json") -> None:
+        super().__init__(config_file=config_file)
+
+        self._tag_groups = defaultdict(self.default_tag_group)
+
+    def default_tag_group(self):
+        return {"tags": []}
+
+    async def _create_tag_cache(self, tag_id: str):
+        await super()._create_tag_cache(tag_id)
+
+        try:
+            frequency = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.source.get("frequency", 5)
+            self._tag_groups[frequency]["tags"].append(tag_id)
+        except:
+            self._logger.exception(f"Указанного тега {tag_id} нет в списке.")
+
+    async def _remove_tag_cache(self, tag_id: str):
+        try:
+            frequency = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.source.get("frequency", 5)
+        except:
+            self._logger.exception(f"Указанного тега {tag_id} нет в списке.")
+            await super()._remove_tag_cache(tag_id)
+            return
+
+        try:
+            self._tag_groups[frequency]["tags"].remove(tag_id)
+        except ValueError:
+            self._logger.exception(f"Тег {tag_id} не найден в соответствующей ему группе {frequency}.")
+
+        if not len(self._tag_groups[frequency]["tags"]):
+            self._tag_groups.pop(frequency)
+
+        await super()._remove_tag_cache(tag_id)
+
+    async def _periodic_task_for_group(self, frequence: float):
+
+        while True:
+            start = time.time()
+            await self._read_group(frequence=frequence)
+            duration = time.time() - start
+            await asyncio.sleep(duration)
+
+    @abstractmethod
+    async def _read_group(self, frequence: float):
+        raise NotImplementedError()
+
+    async def _read_tags(self):
+        tasks = []
+        try:
+            # запускаем для каждой группы тегов задачу чтения
+            for frequence in self._tag_groups.keys():
+                tasks.append(asyncio.create_task(self._periodic_task_for_group(frequence=frequence)))
+
+            self._logger.info(f"Задачи чтения тегов созданы.")
+
+            # не выходим из задачи, ожидаем сигнала прерывания
+            while True:
+                await asyncio.sleep(5)
+
+        except asyncio.CancelledError:
+            for task in tasks:
+                task.cancel()
+            await asyncio.gather(*tasks)
+            self._logger.info(f"Задачи чтения тегов остановлены.")

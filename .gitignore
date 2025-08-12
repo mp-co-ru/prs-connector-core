@@ -174,3 +174,4 @@ cython_debug/
 .pypirc
 
 prs_connector_core/__pycache__
+tst_*

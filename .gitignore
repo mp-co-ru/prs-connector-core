@@ -44,7 +44,6 @@ htmlcov/
 .coverage.*
 .cache
 nosetests.xml
-coverage.xml
 *.cover
 *.py,cover
 .hypothesis/
@@ -174,3 +173,5 @@ cython_debug/
 .pypirc
 
 prs_connector_core/__pycache__
+tst_*
+coverage.xml

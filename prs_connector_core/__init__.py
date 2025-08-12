@@ -7,7 +7,7 @@
 - Кастомные исключения
 """
 
-from .connector import BaseConnector
+from .connector import BaseConnector, TagGroupReaderConnector
 from .config import (
     ConnectorConfig,
     PlatformConfig,
@@ -31,6 +31,7 @@ from typing_extensions import Self
 __all__ = [
     'Self',
     'BaseConnector',
+    'TagGroupReaderConnector',
     'ConnectorConfig',
     'PlatformConfig',
     'LogConfig',
@@ -46,4 +47,4 @@ __all__ = [
     'now_int'
 ]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prs_connector_core"
-version = "0.2.2"
+version = "0.3.0"
 description = "Базовый модуль для коннекторов платформы Пересвет"
 authors = [
     {name = "ООО МПК", email = "info@mp-co.ru"},

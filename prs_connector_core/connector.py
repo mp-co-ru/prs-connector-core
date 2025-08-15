@@ -594,24 +594,24 @@ class TagGroupReaderConnector(BaseConnector):
 
         await super()._remove_tag_cache(tag_id)
 
-    async def _periodic_task_for_group(self, frequence: float):
+    async def _periodic_task_for_group(self, frequency: float):
 
         while True:
             start = time.time()
-            await self._read_group(frequence=frequence)
+            await self._read_group(frequency=frequency)
             duration = time.time() - start
             await asyncio.sleep(duration)
 
     @abstractmethod
-    async def _read_group(self, frequence: float):
+    async def _read_group(self, frequency: float):
         raise NotImplementedError()
 
     async def _read_tags(self):
         tasks = []
         try:
             # запускаем для каждой группы тегов задачу чтения
-            for frequence in self._tag_groups.keys():
-                tasks.append(asyncio.create_task(self._periodic_task_for_group(frequence=frequence)))
+            for frequency in self._tag_groups.keys():
+                tasks.append(asyncio.create_task(self._periodic_task_for_group(frequency=frequency)))
 
             self._logger.info(f"Задачи чтения тегов созданы.")
 

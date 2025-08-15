@@ -56,7 +56,7 @@
         res["additional_key"] = "some value"
         return res
 
-``async def _read_group(self, frequence: float)`` - метод чтения тегов, запускаемый для каждой группы.
+``async def _read_group(self, frequency: float)`` - метод чтения тегов, запускаемый для каждой группы.
 
 Абстрактный метод, обязательный для переопределения в классах-наследниках.
 

@@ -17,7 +17,13 @@ from urllib.parse import urlparse
 from collections import defaultdict
 
 from jsonata import Jsonata
-from .config import ConnectorConfig, LogConfig, PlatformConfig
+from .config import (
+    ConnectorConfig,
+    LogConfig,
+    PlatformConfig,
+    ConnectorPrsJsonConfigStringFromPlatform,
+    TagAttributes
+)
 from .exceptions import (
     ConfigValidationError
 )
@@ -156,11 +162,15 @@ class BaseConnector(ABC):
                 else:
                     new_mes = mes
 
-                if self._mqtt_connected.is_set():
-                    await self._mqtt_client.publish(topic="prsTag/app_api/data_set/*", payload=new_mes, qos=1) # type: ignore
-                else:
-                    await write_to_buf(new_mes)
+                if new_mes["data"]:
+                    if self._mqtt_connected.is_set():
+                        self._logger.info(f"Отправка данных в платформу.")
+                        await self._mqtt_client.publish(topic="prsTag/app_api/data_set/*", payload=json.dumps(new_mes)) # type: ignore
+                    else:
+                        self._logger.info(f"Сохранение данных в буфер.")
+                        await write_to_buf(new_mes)
             except (aiomqtt.MqttError) as ex:
+                self._logger.info(f"Сохранение данных в буфер в результате разрыва связи.")
                 await write_to_buf(mes)
                 self._mqtt_connected.clear()
 
@@ -374,10 +384,16 @@ class BaseConnector(ABC):
     async def _get_connector_configuration_from_platform(self, mes: dict):
         config_changed = False
 
+        checked_prsJsonConfigString = ConnectorPrsJsonConfigStringFromPlatform(**mes["data"]["prsJsonConfigString"])
+        log_config = checked_prsJsonConfigString.model_dump()["log"]
+        lc = mes["data"]["prsJsonConfigString"].get("log")
+        if not lc or not lc.get("fileName"):
+            log_config["fileName"] = PlatformConfig.default_log_file_name(self._config_from_file.id)
+
         if not self._dicts_are_equal(
                self._config_from_platfrom.prsJsonConfigString.log.model_dump(),
-               mes["data"]["prsJsonConfigString"]["log"]):
-            self._config_from_platfrom.prsJsonConfigString.log = LogConfig(**mes["data"]["prsJsonConfigString"]["log"])
+               log_config):
+            self._config_from_platfrom.prsJsonConfigString.log = LogConfig(**log_config)
             self._setup_logger()
             config_changed = True
 
@@ -389,10 +405,9 @@ class BaseConnector(ABC):
             config_changed = True
             if self._read_tags_task and not self._read_tags_task.done():
                 self._read_tags_task.cancel()
-                await asyncio.gather(*self._read_tags_task)
-                self._read_tags_task = None
+                await asyncio.gather(self._read_tags_task)
 
-        if mes["data"]["prsActive"] and self._read_tags_task is None:
+        if mes["data"]["prsActive"] and self._read_tags_task.done():
             self._read_tags_task = asyncio.create_task(self._read_tags())
 
         if mes["data"]["prsActive"] != self._config_from_platfrom.prsActive:
@@ -417,18 +432,19 @@ class BaseConnector(ABC):
             if tag_id in existing_tags:
                 # если тег уже есть в списке...
                 old_tag_hash = self._hash_dict(self._config_from_platfrom.tags[tag_id].model_dump())
-                new_tag_hash = self._hash_dict(tag_data)
+
+                tag_attrs = TagAttributes(**tag_data)
+                new_tag_hash = self._hash_dict(tag_attrs.model_dump())
                 if old_tag_hash != new_tag_hash:
                     add_tag = True
-                    self._config_from_platfrom.tags.pop(tag_id)
                     await self._remove_tag_cache(tag_id)
-
+                    self._config_from_platfrom.tags.pop(tag_id)
             else:
                 add_tag = True
 
             if add_tag:
                 config_changed = True
-                self._config_from_platfrom.tags[tag_id] = tag_data
+                self._config_from_platfrom.tags[tag_id] = TagAttributes(**tag_data)
                 await self._create_tag_cache(tag_id)
 
         if config_changed:
@@ -449,10 +465,13 @@ class BaseConnector(ABC):
         while True:
             try:
                 await self._mqtt_connected.wait()
-
                 if self._mqtt_client:
                     async for message in self._mqtt_client.messages:
-                        message_data = json.loads(str(message.payload))
+                        json_str = message.payload.decode('utf8')
+                        message_data = json.loads(json_str)
+
+                        self._logger.info(f"Сообщение от платформы: {message_data["action"]}.")
+
                         match message_data["action"]:
                             case "prsConnector.full_configuration":
                                 await self._get_full_configuration_from_platform(message_data)
@@ -467,6 +486,8 @@ class BaseConnector(ABC):
 
             except aiomqtt.MqttError:
                 self._mqtt_connected.clear()
+            except Exception as ex:
+                self._logger.exception(f"Исключение {ex}.")
 
     async def _deleted(self, message_data):
         self._config_from_platfrom.prsActive = False
@@ -481,7 +502,7 @@ class BaseConnector(ABC):
 
         formatter = logging.Formatter(
             '%(asctime)s :: [%(levelname)s] :: %(name)s :: %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S.%f'
+            datefmt='%Y-%m-%d %H:%M:%S'
         )
 
         log_file = Path(self._config_from_platfrom.prsJsonConfigString.log.fileName)
@@ -574,13 +595,13 @@ class TagGroupReaderConnector(BaseConnector):
             frequency = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.source.get("frequency", 5)
             self._tag_groups[frequency]["tags"].append(tag_id)
         except:
-            self._logger.exception(f"Указанного тега {tag_id} нет в списке.")
+            self._logger.exception(f"Создание кэша: указанного тега {tag_id} нет в списке.")
 
     async def _remove_tag_cache(self, tag_id: str):
         try:
             frequency = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.source.get("frequency", 5)
         except:
-            self._logger.exception(f"Указанного тега {tag_id} нет в списке.")
+            self._logger.exception(f"Удаление кэша: указанного тега {tag_id} нет в списке.")
             await super()._remove_tag_cache(tag_id)
             return
 
@@ -600,7 +621,7 @@ class TagGroupReaderConnector(BaseConnector):
             start = time.time()
             await self._read_group(frequency=frequency)
             duration = time.time() - start
-            await asyncio.sleep(duration)
+            await asyncio.sleep(frequency - duration)
 
     @abstractmethod
     async def _read_group(self, frequency: float):

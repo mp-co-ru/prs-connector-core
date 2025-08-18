@@ -155,10 +155,14 @@ class PlatformConfig(BaseModel):
             new_inst = cls.model_validate_json(config_file.read_text())
         else:
             new_inst = cls()
-        new_inst.prsJsonConfigString.log.fileName = f"logs/prs_connector_{connector_id}.log"
+        new_inst.prsJsonConfigString.log.fileName = cls.default_log_file_name(connector_id)
         return new_inst
 
+    @classmethod
+    def default_log_file_name(cls, connector_id: str) -> str:
+        return f"logs/prs_connector_{connector_id}.log"
+
     def save(self, connector_id: str) -> None:
-        Path(self._form_file_name(connector_id=connector_id)).write_text(
-            self.model_dump_json(indent=2, exclude_unset=True)
-        )
+        config_file = Path(self._form_file_name(connector_id=connector_id))
+        data = self.model_dump_json(indent=2)
+        config_file.write_text(data)

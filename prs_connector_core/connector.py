@@ -165,7 +165,7 @@ class BaseConnector(ABC):
                 if new_mes["data"]:
                     if self._mqtt_connected.is_set():
                         self._logger.info(f"Отправка данных в платформу.")
-                        await self._mqtt_client.publish(topic="prsTag/app_api/data_set/*", payload=json.dumps(new_mes)) # type: ignore
+                        await self._mqtt_client.publish(topic="prsTag.app_api_client.data_set.*", payload=json.dumps(new_mes)) # type: ignore
                     else:
                         self._logger.info(f"Сохранение данных в буфер.")
                         await write_to_buf(new_mes)

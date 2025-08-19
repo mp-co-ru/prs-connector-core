@@ -134,10 +134,6 @@ class BaseConnector(ABC):
         # Ожидаем завершения задач
         await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Закрываем файловые дескрипторы
-        if hasattr(self, '_buf_file') and self._buf_file:
-            await self._buf_file.close()
-
     def _emergency_shutdown(self, message: str) -> None:
         """Аварийное завершение работы при критических ошибках"""
         logger = logging.getLogger("prs_emergency")
@@ -149,12 +145,14 @@ class BaseConnector(ABC):
         # при неудаче сохраняем в буфер
         async def write_to_buf(mes):
             async with self._buf_file_lock:
-                s = json.dumps(mes)
-                await self._buf_file.write(s) # type: ignore
+                async with aiofiles.open(self._buf_file_name, mode="+a") as buf_file:
+                    s = json.dumps(mes)
+                    await buf_file.write(s)
 
         while True:
             mes = await self._data_queue.get()
             try:
+                self._logger.debug(f"Новое сообщение с данными: {mes}.")
                 # при помещении сообщения из буфера в очередь мы помечаем его как уже обработанное
                 processed = mes.get("processed", False)
                 if not processed:
@@ -165,14 +163,14 @@ class BaseConnector(ABC):
                 if new_mes["data"]:
                     if self._mqtt_connected.is_set():
                         self._logger.info(f"Отправка данных в платформу.")
-                        await self._mqtt_client.publish(topic="prsTag.app_api_client.data_set.*", payload=json.dumps(new_mes)) # type: ignore
+                        await self._mqtt_client.publish(topic="prsTag/app_api_client/data_set/*", payload=json.dumps(new_mes)) # type: ignore
                     else:
-                        self._logger.info(f"Сохранение данных в буфер.")
                         await write_to_buf(new_mes)
-            except (aiomqtt.MqttError) as ex:
-                self._logger.info(f"Сохранение данных в буфер в результате разрыва связи.")
-                await write_to_buf(mes)
+                        self._logger.info(f"Данные сохранены в буфер.")
+            except (aiomqtt.MqttError) as _:
                 self._mqtt_connected.clear()
+                await write_to_buf(mes)
+                self._logger.info(f"Ошибка передачи данных: сохраняем в буфер.")
 
     async def _process_buffer(self):
         while True:
@@ -182,29 +180,30 @@ class BaseConnector(ABC):
                 stat = await aiofiles.os.stat(self._buf_file_name)
                 if stat.st_size > 0:
                     # если размер буфера > 0
-                    tmp_file = await aiofiles.open(self._tmp_buf_file_name, mode="+a")
+                    self._logger.info("Обработка буфера данных.")
+                    async with aiofiles.open(self._tmp_buf_file_name, mode="+a") as tmp_file:
+                        queue_full = False
+                        async with aiofiles.open(self._buf_file_name) as buf_file:
+                            async for line in buf_file: # type: ignore
+                                if queue_full or not self._mqtt_connected.is_set():
+                                    # если в процессе обработки буфера переполнилась очередь или прервалась связь с платформой,
+                                    # то все оставшиеся в буфере строки пишем во временный файл и потом
+                                    # переименовываем временный файл в файл буфера
+                                    await tmp_file.write(line)
+                                    self._logger.debug("Запись данных обратно в буфер.")
+                                else:
+                                    try:
+                                        js = json.loads(line)
+                                        js["processed"] = True
+                                        self._data_queue.put_nowait(js)
+                                        self._logger.debug("Запись данных из буфера в очередь.")
+                                    except asyncio.QueueFull as _:
+                                        if not queue_full:
+                                            self._logger.exception("Очередь сообщений переполнена.")
+                                            queue_full = True
+                                            await tmp_file.write(line)
 
-                    queue_full = False
-                    async for line in self._buf_file: # type: ignore
-                        if queue_full or not self._mqtt_connected.is_set():
-                            # если в процессе обработки буфера переполнилась очередь или прервалась связь с платформой,
-                            # то все оставшиеся в буфере строки пишем во временный файл и потом
-                            # переименовываем временный файл в файл буфера
-                            await tmp_file.write(line)
-                        try:
-                            js = json.loads(line)
-                            js["processed"] = True
-                            self._data_queue.put_nowait(js)
-                        except asyncio.QueueFull as _:
-                            if not queue_full:
-                                self._logger.exception("Очередь сообщений переполнена.")
-                                queue_full = True
-                                await tmp_file.write(line)
-
-                    await self._buf_file.close() # type: ignore
-                    await tmp_file.close()
                     await aiofiles.os.replace(self._tmp_buf_file_name, self._buf_file_name)
-                    self._buf_file = await aiofiles.open(self._buf_file_name)
 
             await asyncio.sleep(10)
 
@@ -296,8 +295,6 @@ class BaseConnector(ABC):
 
         for tag_id in self._config_from_platfrom.tags.keys():
             await self._create_tag_cache(tag_id)
-
-        self._buf_file = await aiofiles.open(self._buf_file_name, mode="+a")
 
         for sig in [signal.SIGINT, signal.SIGTERM]:
             self._loop.add_signal_handler(

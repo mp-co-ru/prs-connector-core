@@ -513,7 +513,7 @@ class BaseConnector(ABC):
                         json_str = message.payload.decode('utf8')
                         message_data = json.loads(json_str)
 
-                        self._logger.info(f"Сообщение от платформы: {message_data["action"]}.")
+                        self._logger.info(f"Сообщение от платформы: {message_data['action']}.")
 
                         match message_data["action"]:
                             case "prsConnector.full_configuration":
@@ -720,8 +720,6 @@ class TagGroupReaderConnector(BaseConnector):
                     self._logger.exception(f"Задачи чтения тегов не завершились корректно.")
                     self._logger.info(f"Задачи чтения тегов остановлены.")
             await self._close_source()
-
-
 
     @abstractmethod
     async def _connect_to_source(self) -> bool:

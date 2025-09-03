@@ -9,7 +9,7 @@
 project = 'prs-connector-core'
 copyright = '2025, ООО МПК'
 author = 'ООО МПК'
-release = '0.5.2'
+release = '0.6.0'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

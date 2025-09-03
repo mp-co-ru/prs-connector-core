@@ -108,15 +108,15 @@ class BaseConnector(ABC):
             self._emergency_shutdown("Ошибка загрузки сертификатов.")
 
         # обработка сообщений от платформы
-        self._handle_messages_task = None
+        self._handle_messages_task: asyncio.Task | None = None
         # чтение данных тегов
-        self._read_tags_task = None
+        self._read_tags_task: asyncio.Task | None = None
         # работа с данными
-        self._push_data_task = None
+        self._push_data_task: asyncio.Task | None = None
         # работа с буфером
-        self._process_buffer_task = None
+        self._process_buffer_task: asyncio.Task | None = None
 
-        self._canceled = False
+        self._canceled: bool = False
 
     async def _shutdown(self):
         """Обработчик завершения работы"""
@@ -137,7 +137,7 @@ class BaseConnector(ABC):
                 task.cancel()
 
         # Ожидаем завершения задач
-        _, pending = await asyncio.wait(tasks, timeout=15.0)
+        _, pending = await asyncio.wait(tasks, timeout=10.0)
 
         if pending:
             self._logger.exception(f"При остановке коннектора некоторые задачи не успели корректно завершиться: {pending}.")
@@ -406,7 +406,7 @@ class BaseConnector(ABC):
                 "tags": mes["data"]["tags"]
             }
         }
-        await self._tags_add_or_changed(new_mes)
+        await self._tags_add_or_changed(mes=new_mes, full_list=True)
 
     @classmethod
     def _hash_dict(cls, js: dict) -> bytes:
@@ -448,13 +448,22 @@ class BaseConnector(ABC):
             config_changed = True
             if self._read_tags_task and not self._read_tags_task.done():
                 self._read_tags_task.cancel()
-                await asyncio.gather(self._read_tags_task)
-
-        if mes["data"]["prsActive"] and self._read_tags_task.done():
-            self._read_tags_task = asyncio.create_task(self._read_tags())
+                await asyncio.wait([self._read_tags_task])
 
         if mes["data"]["prsActive"] != self._config_from_platfrom.prsActive:
             self._config_from_platfrom.prsActive = mes["data"]["prsActive"]
+
+            if mes["data"]["prsActive"]:
+                if self._read_tags_task and not self._read_tags_task.done():
+                    self._read_tags_task.cancel()
+                    await asyncio.wait([self._read_tags_task], timeout=3)
+                self._read_tags_task = asyncio.create_task(self._read_tags())
+            else:
+                if self._read_tags_task and not self._read_tags_task.done():
+                    self._read_tags_task.cancel()
+                    await asyncio.wait([self._read_tags_task], timeout=3)
+                self._logger.info("Коннектор неактивен, работа по чтению данных остановлена.")
+
             config_changed = True
 
         if mes["data"]["prsEntityTypeCode"] != self._config_from_platfrom.prsEntityTypeCode:
@@ -466,10 +475,23 @@ class BaseConnector(ABC):
             self._config_from_platfrom.save(self._config_from_file.id)
             self._logger.info("Конфигурация коннектора изменена.")
 
-    async def _tags_add_or_changed(self, mes: dict):
+    async def _remove_tag(self, tag_id):
+        """Удаление тега из списка"""
+        await self._remove_tag_cache(tag_id)
+        self._config_from_platfrom.tags.pop(tag_id, None)
+
+    async def _tags_add_or_changed(self, mes: dict, full_list: bool = False):
+        config_changed = False
+
+        if full_list:
+            tags_to_delete = list(set(self._config_from_platfrom.tags.keys()) - set(mes["data"]["tags"].keys()))
+            if tags_to_delete:
+                config_changed = True
+            for tag_id in tags_to_delete:
+                await self._remove_tag(tag_id)
+
         existing_tags = self._config_from_platfrom.tags.keys()
 
-        config_changed = False
         for tag_id, tag_data in mes["data"]["tags"].items():
             add_tag = False
             if tag_id in existing_tags:
@@ -480,29 +502,43 @@ class BaseConnector(ABC):
                 new_tag_hash = self._hash_dict(tag_attrs.model_dump())
                 if old_tag_hash != new_tag_hash:
                     add_tag = True
-                    await self._remove_tag_cache(tag_id)
-                    self._config_from_platfrom.tags.pop(tag_id)
+                    await self._remove_tag(tag_id=tag_id)
             else:
                 add_tag = True
 
             if add_tag:
-                config_changed = True
                 self._config_from_platfrom.tags[tag_id] = TagAttributes(**tag_data)
-                await self._create_tag_cache(tag_id)
+                if await self._create_tag_cache(tag_id):
+                    config_changed = True
+                else:
+                    self._logger.info(f"Неверная конфигурация тега {tag_id}.")
 
         if config_changed:
             self._config_from_platfrom.save(self._config_from_file.id)
+
+            await self._refresh_read_tags()
+
             self._logger.info("Конфигурация тегов изменена.")
+
+    async def _refresh_read_tags(self):
+        if self._read_tags_task and not self._read_tags_task.done():
+            self._read_tags_task.cancel()
+            await asyncio.wait([self._read_tags_task], timeout=3)
+
+        self._read_tags_task = asyncio.create_task(self._read_tags())
 
     async def _tags_deleted(self, mes: dict):
         # удаление тегов из списка обрабатываемых коннектором
 
         # аналогично методу _create_tag_cache, может быть переписан в классе-наследнике
         for tag_id in mes["data"]["tags"]:
-            self._config_from_platfrom.tags.pop(tag_id)
             await self._remove_tag_cache(tag_id)
+            self._config_from_platfrom.tags.pop(tag_id)
 
             self._logger.info(f"Тег {tag_id} удалён из списка.")
+
+        self._config_from_platfrom.save(self._config_from_file.id)
+        self._logger.info(f"Конфигурация сохранена.")
 
     async def _handle_messages(self):
         while not self._canceled:
@@ -510,7 +546,7 @@ class BaseConnector(ABC):
                 await self._mqtt_connected.wait()
                 if self._mqtt_client:
                     async for message in self._mqtt_client.messages:
-                        json_str = message.payload.decode('utf8')
+                        json_str = message.payload.decode('utf8') # type: ignore
                         message_data = json.loads(json_str)
 
                         self._logger.info(f"Сообщение от платформы: {message_data['action']}.")
@@ -605,10 +641,7 @@ class BaseConnector(ABC):
         # если при удалении из конфигурации тега необходимо выполнить дополнительные действия, то
         # то данный метод необходимо переопределить в классе-наследнике
         # и вызвать данный метод
-        try:
-            self._tag_cache.pop(tag_id)
-        except KeyError:
-            pass
+        self._tag_cache.pop(tag_id, None)
 
     @abstractmethod
     async def _read_tags(self):
@@ -644,7 +677,7 @@ class TagGroupReaderConnector(BaseConnector):
         self._source_connected = asyncio.Event()
 
     def default_tag_group(self):
-        return {"tags": []}
+        return {"tags": [], "task": None}
 
     async def _create_tag_cache(self, tag_id: str) -> bool:
         if await super()._create_tag_cache(tag_id):
@@ -671,7 +704,11 @@ class TagGroupReaderConnector(BaseConnector):
             self._logger.exception(f"Тег {tag_id} не найден в соответствующей ему группе {frequency}.")
 
         if not len(self._tag_groups[frequency]["tags"]):
+            if self._tag_groups[frequency]["task"] and not self._tag_groups[frequency]["task"].done():
+                self._tag_groups[frequency]["task"].cancel()
+                await asyncio.wait([self._tag_groups[frequency]["task"]], timeout=3)
             self._tag_groups.pop(frequency)
+            self._logger.info(f"Удалена группа чтения {frequency}.")
 
         await super()._remove_tag_cache(tag_id)
 
@@ -690,28 +727,37 @@ class TagGroupReaderConnector(BaseConnector):
         raise NotImplementedError()
 
     async def _read_tags(self):
-        tasks = []
-
         try:
             while not self._canceled:
                 if await self._connect_to_source():
                     for frequency in self._tag_groups.keys():
-                        tasks.append(asyncio.create_task(self._periodic_task_for_group(frequency=frequency)))
+                        self._tag_groups[frequency]["task"] = asyncio.create_task(
+                            self._periodic_task_for_group(frequency=frequency)
+                        )
                     self._logger.info(f"Задачи чтения тегов созданы.")
 
                     while True:
                         if self._source_connected.is_set():
                             await asyncio.sleep(5)
                         else:
-                            for task in tasks:
-                                task.cancel()
-                            _, pending = await asyncio.wait(tasks, timeout=3)
+                            tasks = []
+                            for frequency in self._tag_groups.keys():
+                                if self._tag_groups[frequency]["task"] and not self._tag_groups[frequency]["task"].done():
+                                    tasks.append(self._tag_groups[frequency]["task"])
+                            if tasks:
+                                for task in tasks:
+                                    task.cancel()
+                                await asyncio.wait(tasks, timeout=3)
                             await self._close_source()
                 else:
                     await asyncio.sleep(5)
 
 
         except asyncio.CancelledError:
+            tasks = []
+            for frequency in self._tag_groups.keys():
+                if self._tag_groups[frequency]["task"] and not self._tag_groups[frequency]["task"].done():
+                    tasks.append(self._tag_groups[frequency]["task"])
             if tasks:
                 for task in tasks:
                     task.cancel()

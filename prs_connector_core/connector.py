@@ -137,7 +137,7 @@ class BaseConnector(ABC):
                 task.cancel()
 
         # Ожидаем завершения задач
-        _, pending = await asyncio.wait(tasks, timeout=10.0)
+        _, pending = await asyncio.wait(tasks, timeout=10.0) # type: ignore
 
         if pending:
             self._logger.exception(f"При остановке коннектора некоторые задачи не успели корректно завершиться: {pending}.")

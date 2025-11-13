@@ -153,7 +153,9 @@ class BaseConnector(ABC):
     async def _push_data(self):
         # берём из очереди сообщение и пытаемся отправить его в платформу
         # при неудаче сохраняем в буфер
+
         async def write_to_buf(mes):
+            # запись сообщения в буфер
             async with self._buf_file_lock:
                 async with aiofiles.open(self._buf_file_name, mode="+a") as buf_file:
                     s = json.dumps(mes)
@@ -190,6 +192,9 @@ class BaseConnector(ABC):
                 return
 
     async def _process_buffer(self):
+        # бесконечная функция обработки буфера
+        # логика: если нет связи с брокером, просто ничего не делаем
+        # иначе, если размер буфера > 0, то пытаемся отправить данные из него в платформу
         try:
             while not self._canceled:
                 if not self._mqtt_connected.is_set():
@@ -268,12 +273,15 @@ class BaseConnector(ABC):
                     "tagId": tag_id,
                     "data": []
                 }
+
                 jsonata_expr = self._tag_cache[tag_id]["JSONataExpr"]
                 last_value = self._tag_cache[tag_id]["last_value"]
+                last_quality = self._tag_cache[tag_id]["last_q"]
                 value_type = self._config_from_platfrom.tags[tag_id].prsValueTypeCode
                 max_dev = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.maxDev
                 for data_value in tag["data"]:
                     new_data_value = data_value
+                    new_data_quality = None if len(new_data_value) < 3 else new_data_value[2]
                     if jsonata_expr:
                         new_data_value[0] = jsonata_expr.evaluate(new_data_value[0])
                     if len(new_data_value) == 1:
@@ -295,18 +303,21 @@ class BaseConnector(ABC):
                                 self._logger.exception(f"Тег '{tag_id}'. Ошибка конвертации значения '{new_data_value[0]}' к типу {value_type}")
                                 continue
 
-                    if (max_dev == 0 or \
-                        last_value is None or \
-                        new_data_value[0] is None and last_value is not None or \
-                        value_type in [0, 1] and (max_dev <= abs(last_value - new_data_value[0])) or \
-                        value_type == 2 and last_value != new_data_value[0] or \
-                        value_type == 4 and not self._dicts_are_equal(last_value, new_data_value[0])):
+                    if (max_dev == 0 or
+                        last_value is None or
+                        new_data_value[0] is None and last_value is not None or
+                        value_type in [0, 1] and (max_dev <= abs(last_value - new_data_value[0])) or
+                        value_type == 2 and last_value != new_data_value[0] or
+                        value_type == 4 and not self._dicts_are_equal(last_value, new_data_value[0]) or
+                        last_quality != new_data_quality):
 
                         new_tag_data["data"].append(new_data_value)
                         last_value = new_data_value[0]
+                        last_quality = new_data_quality
 
                 if new_tag_data["data"]:
                     self._tag_cache[tag_id]["last_value"] = last_value
+                    self._tag_cache[tag_id]["last_q"] = last_quality
                     new_data["data"].append(new_tag_data)
 
         except Exception as e:
@@ -622,6 +633,7 @@ class BaseConnector(ABC):
 
         self._tag_cache[tag_id] = {
             "last_value": None,
+            "last_q": None, # quality
             "JSONataExpr": None
         }
         expr = None

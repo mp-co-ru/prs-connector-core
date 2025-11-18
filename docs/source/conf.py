@@ -41,3 +41,8 @@ html_logo = "pics/logo.png"
 #}
 togglebutton_hint = ""
 togglebutton_hint_hide = ""
+
+html_theme_options = {
+    'logo_only': True,
+    'display_version': True,
+}

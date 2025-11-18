@@ -23,6 +23,7 @@ dependencies = [
     "colorlog==6.9.0",
     "python-json-logger==3.3.0",
     "pydantic==2.11.3",
+    "pydantic_core==2.33.1",
     "aiofiles==24.1.0",
     "ciso8601==2.3.2"
 ]

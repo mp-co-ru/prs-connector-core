@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import sys
 import json
 import copy
 import hashlib
@@ -118,6 +119,11 @@ class BaseConnector(ABC):
 
         self._canceled: bool = False
 
+        if sys.platform.lower() == "win32" or os.name.lower() == "nt":
+            # этот код работает только в Windows
+            from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy # type: ignore
+            set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+
     async def _shutdown(self):
         """Обработчик завершения работы"""
         self._logger.info(f"Получен сигнал завершения работы, сохраняем данные...")
@@ -129,8 +135,6 @@ class BaseConnector(ABC):
             self._process_buffer_task,
             self._read_tags_task
         ]
-
-        self._canceled = True
 
         for task in tasks:
             if task and not task.done():
@@ -325,14 +329,24 @@ class BaseConnector(ABC):
 
         return new_data
 
+    def _handle_signal_win(self, signum, frame):
+        """Обработчик для Windows"""
+        self._canceled = True
+
+    def _handle_signal_unix(self):
+        """Обработчик для Unix"""
+        self._canceled = True
+
     async def run(self) -> None:
 
         self._loop = asyncio.get_running_loop()
 
-        for sig in [signal.SIGINT, signal.SIGTERM]:
-            self._loop.add_signal_handler(
-                sig, lambda: asyncio.create_task(self._shutdown())
-            )
+        if sys.platform.lower() == "win32" or os.name.lower() == "nt":
+            for sig in [signal.SIGINT, signal.SIGTERM]:
+                signal.signal(sig, self._handle_signal_win)
+        else:
+            for sig in [signal.SIGINT, signal.SIGTERM]:
+                self._loop.add_signal_handler(sig, self._handle_signal_unix)
 
         # создадим файл буфера
         async with aiofiles.open(self._buf_file_name, mode="+a") as _:
@@ -396,6 +410,7 @@ class BaseConnector(ABC):
                     else:
                         break
 
+            await self._shutdown()
         except asyncio.CancelledError:
             pass
 

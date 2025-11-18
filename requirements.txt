@@ -33,7 +33,7 @@ nh3==0.3.2
 packaging==25.0
 paho-mqtt==2.1.0
 pluggy==1.6.0
--e git+ssh://git@github.com/mp-co-ru/prs-connector-core.git@3484331081da780be6221080d9ff386eb5651e33#egg=prs_connector_core
+-e .
 pycparser==2.23
 pydantic==2.11.3
 pydantic_core==2.33.1

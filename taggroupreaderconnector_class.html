@@ -1,0 +1,209 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Класс TagGroupReaderConnector &mdash; документация prs-connector-core 0.8.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinxcontrib-httpexample.css" />
+      <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+
+  
+    <link rel="shortcut icon" href="_static/peresvet_middle.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=266874fb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/sphinxcontrib-httpexample.js"></script>
+      <script>let toggleHintShow = '';</script>
+      <script>let toggleHintHide = '';</script>
+      <script>let toggleOpenOnPrint = 'true';</script>
+      <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+      <script src="_static/translations.js?v=cd1d70c9"></script>
+      <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="prev" title="Класс BaseConnector" href="baseconnector_class.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Логотип"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1"><a class="reference internal" href="work_logic.html">Логика работы коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="message_format.html">Формат сообщений</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_new_connector.html">Разработка нового коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseconnector_class.html">Класс BaseConnector</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Класс TagGroupReaderConnector</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Атрибуты</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id2">Методы</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">prs-connector-core</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Класс TagGroupReaderConnector</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/taggroupreaderconnector_class.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="taggroupreaderconnector">
+<h1>Класс TagGroupReaderConnector<a class="headerlink" href="#taggroupreaderconnector" title="Ссылка на этот заголовок"></a></h1>
+<p>Класс является наследником класса <a class="reference internal" href="baseconnector_class.html#baseconnector"><span class="std std-ref">BaseConnector</span></a>.</p>
+<p>Класс создан для реализации коннекторов, самостоятельно инициирующих чтение данных из источника.
+Такие коннекторы обычно читают несколько тегов, причём теги могут читаться с разной частотой.</p>
+<p>Данный класс группирует теги по частоте чтения и для каждой группы запускает отдельную
+бесконечную задачу чтения, выполняемую с определённой частотой.</p>
+<div class="dropdown admonition">
+<p class="admonition-title">Требование к конфигурации привязанного к коннектору тега</p>
+<blockquote>
+<div><p>Коннектор вводит дополнительное правило: атрибут <code class="docutils literal notranslate"><span class="pre">source</span></code> в конфигурации, хранимой в
+<code class="docutils literal notranslate"><span class="pre">prsJsonConfigString</span></code> привязанного тега, должен содержать ключ <code class="docutils literal notranslate"><span class="pre">frequency</span></code>, значение которого - частота
+чтения тега из источника в секундах. Тип значения - вещественное.</p>
+<p>В случае, если ключ <code class="docutils literal notranslate"><span class="pre">frequency</span></code> отсутствует, то принимается значение по умолчанию в пять
+секунд.</p>
+</div></blockquote>
+</div>
+<section id="id1">
+<h2>Атрибуты<a class="headerlink" href="#id1" title="Ссылка на этот заголовок"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">_tag_groups</span></code> - группы тегов. Атрибут имеет вид:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="o">&lt;</span><span class="n">frequency_1</span><span class="o">&gt;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;tag_id_1&quot;</span><span class="p">,</span> <span class="s2">&quot;tag_id_2&quot;</span><span class="p">]</span>
+    <span class="p">},</span>
+    <span class="o">&lt;</span><span class="n">frequency_2</span><span class="o">&gt;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;tag_id_3&quot;</span><span class="p">,</span> <span class="s2">&quot;tag_id_4&quot;</span><span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Если кэш группы должен содержать ещё какие-либо атрибуты, кроме <code class="docutils literal notranslate"><span class="pre">tags</span></code>,
+то необходимо переопределить метод <code class="docutils literal notranslate"><span class="pre">default_tag_group</span></code>.</p>
+</section>
+<section id="id2">
+<h2>Методы<a class="headerlink" href="#id2" title="Ссылка на этот заголовок"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">def</span> <span class="pre">default_tag_group(self)</span></code> - метод создаёт группу тегов по умолчанию в виде объекта:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Если необходимо расширить группу дополнительными ключами, то метод необходимо переопределить:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">default_tag_group</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">default_tag_group</span><span class="p">()</span>
+    <span class="n">res</span><span class="p">[</span><span class="s2">&quot;additional_key&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;some value&quot;</span>
+    <span class="k">return</span> <span class="n">res</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span> <span class="pre">_read_group(self,</span> <span class="pre">frequency:</span> <span class="pre">float)</span></code> - метод чтения тегов, запускаемый для каждой группы.</p>
+<p>Абстрактный метод, обязательный для переопределения в классах-наследниках.</p>
+<p>В отличие от класса <a class="reference internal" href="baseconnector_class.html#baseconnector"><span class="std std-ref">BaseConnector</span></a>, основная работа по чтению данных
+должна быть реализована именно в этом методе, а не в <code class="docutils literal notranslate"><span class="pre">_read_tags</span></code>.</p>
+<p>Периодичность вызова обеспечивается классом.</p>
+<p><code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span> <span class="pre">_read_tags(self)</span></code> - метод работает как задача и запускает, в свою очередь, для каждой группы
+тегов отдельную задачу чтения. Когда коннектор получает от платформы новую конфигурацию,
+этот метод получает сигнал прекращения работы и останавливает все задачи чтения данных.</p>
+<p>В случае, если при старте работы коннектора необходимо выполнить дополнительную работу,
+к примеру, для каждой группы создать свой экземпляр клиента чтения данных,
+то метод должен быть переопределён:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_read_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+    <span class="k">for</span> <span class="n">frequncy</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tag_groups</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_tag_groups</span><span class="p">[</span><span class="n">frequency</span><span class="p">][</span><span class="s2">&quot;client&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SomeProtocolClient</span><span class="p">()</span>
+
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_read_tags</span><span class="p">()</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span> <span class="pre">_remove_tag_cache(self,</span> <span class="pre">tag_id:</span> <span class="pre">str)</span></code> - метод удаляет кэш тега.
+Если тег - последний в группе, то удаляется и сама группа.</p>
+<p>Соответственно, если при удалении группы необходимо выполнить дополнительную работу,
+то переопределяем этот метод:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_remove_tag_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tag_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="n">frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_from_platfrom</span><span class="o">.</span><span class="n">tags</span><span class="p">[</span><span class="n">tag_id</span><span class="p">]</span><span class="o">.</span><span class="n">prsJsonConfigString</span><span class="o">.</span><span class="n">source</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;frequency&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+
+    <span class="n">tag_group</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tag_groups</span><span class="p">[</span><span class="n">frequency</span><span class="p">]</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Некоторая дополнительная работа с tag_group...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_remove_tag_cache</span><span class="p">(</span><span class="n">tag_id</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="baseconnector_class.html" class="btn btn-neutral float-left" title="Класс BaseConnector" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Предыдущая</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025, ООО МПК. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

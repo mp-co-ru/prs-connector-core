@@ -1,0 +1,295 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Формат сообщений &mdash; документация prs-connector-core 0.8.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinxcontrib-httpexample.css" />
+      <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+
+  
+    <link rel="shortcut icon" href="_static/peresvet_middle.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=266874fb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/sphinxcontrib-httpexample.js"></script>
+      <script>let toggleHintShow = '';</script>
+      <script>let toggleHintHide = '';</script>
+      <script>let toggleOpenOnPrint = 'true';</script>
+      <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+      <script src="_static/translations.js?v=cd1d70c9"></script>
+      <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Разработка нового коннектора" href="create_new_connector.html" />
+    <link rel="prev" title="Логика работы коннектора" href="work_logic.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Логотип"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1"><a class="reference internal" href="work_logic.html">Логика работы коннектора</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Формат сообщений</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">Сообщения от коннектора к платформе</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Запрос на получение полной конфигурации</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">Запись данных</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">Сообщения от платформы коннектору</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#full-config">Полная конфигурация</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id7">Изменение конфигурации коннектора</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id8">Удаление коннектора</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id9">Добавление нового тега(-ов) или изменение конфигурации тега(-ов)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id10">Удаление тегов из списка</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="create_new_connector.html">Разработка нового коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseconnector_class.html">Класс BaseConnector</a></li>
+<li class="toctree-l1"><a class="reference internal" href="taggroupreaderconnector_class.html">Класс TagGroupReaderConnector</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">prs-connector-core</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Формат сообщений</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/message_format.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="id1">
+<h1>Формат сообщений<a class="headerlink" href="#id1" title="Ссылка на этот заголовок"></a></h1>
+<section id="id2">
+<h2>Сообщения от коннектора к платформе<a class="headerlink" href="#id2" title="Ссылка на этот заголовок"></a></h2>
+<section id="id3">
+<h3>Запрос на получение полной конфигурации<a class="headerlink" href="#id3" title="Ссылка на этот заголовок"></a></h3>
+<p>Сообщение посылается коннектором в платформу каждый раз после установления
+связи с ней:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.get_configuration&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;connector_id&gt;&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id4">
+<h3>Запись данных<a class="headerlink" href="#id4" title="Ссылка на этот заголовок"></a></h3>
+<p>Коннектор в этом сообщении отсылает данные в платформу.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.data_set.*&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;tagId&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[[],</span> <span class="p">]</span>
+            <span class="p">}</span>
+        <span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id5">
+<h2>Сообщения от платформы коннектору<a class="headerlink" href="#id5" title="Ссылка на этот заголовок"></a></h2>
+<section id="full-config">
+<span id="id6"></span><h3>Полная конфигурация<a class="headerlink" href="#full-config" title="Ссылка на этот заголовок"></a></h3>
+<p>Это сообщение приходит коннектору в ответ на его запрос конфигурации.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.full_configuration&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>          <span class="c1"># флаг активности коннектора, если = False, коннектор ничего не должен делать,</span>
+                                    <span class="c1"># только ожидать от платформы сообщения с конфигурацией,</span>
+                                    <span class="c1"># где этот флаг будет = True</span>
+        <span class="s2">&quot;prsEntityTypeCode&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># тип коннектора. Этот параметр никак не используется базовым классом коннектора.</span>
+                                    <span class="c1"># в классах-наследниках может использоваться по любому усмотрению.</span>
+        <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>    <span class="c1"># базовая конфигурация коннектора. Если классам-наследникам необходима</span>
+                                    <span class="c1"># дополнительная информация в конфигурации, её необходимо включать именно в этот</span>
+                                    <span class="c1"># ключ.</span>
+            <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{},</span>           <span class="c1"># способ подключения к источнику данных. Формат данного ключа целиком зависит</span>
+                                    <span class="c1"># от конкретной реализации коннектора и должен быть описан в его документации.</span>
+            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="p">{</span>                <span class="c1"># конфигурация журнала логов</span>
+                <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="s2">&quot;INFO&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;fileName&quot;</span><span class="p">:</span> <span class="s2">&quot;logs/prs_connector.log&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;maxBytes&quot;</span><span class="p">:</span> <span class="mi">10485760</span><span class="p">,</span>
+                <span class="s2">&quot;backupCount&quot;</span><span class="p">:</span> <span class="mi">10</span>
+            <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>                                           <span class="c1"># список тегов, привязанных к коннектору</span>
+            <span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">:</span> <span class="p">{</span>                                   <span class="c1"># идентификатор тега</span>
+                <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>                          <span class="c1"># флаг активности тега</span>
+                <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>                    <span class="c1"># информация по работе с тегом.</span>
+                                                            <span class="c1"># Если классам-наследникам необходима дополнительная</span>
+                                                            <span class="c1"># информация, то её необходимо включать в этот ключ.</span>
+                    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{},</span>                           <span class="c1"># способ получения данных тега из источника.</span>
+                                                            <span class="c1"># Формат данного ключа целиком зависит</span>
+                                                            <span class="c1"># от конкретной реализации коннектора и</span>
+                                                            <span class="c1"># должен быть описан в его документации.</span>
+                    <span class="s2">&quot;maxDev&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>                          <span class="c1"># минимальное значимое отклонение значения</span>
+                    <span class="s2">&quot;JSONata&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;some jsonata expression&gt;&quot;</span>  <span class="c1"># выражение на языке JSONata, которое будет применено к</span>
+                                                            <span class="c1"># считанным из источника данным</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;prsValueTypeCode&quot;</span><span class="p">:</span> <span class="mi">1</span>                       <span class="c1"># тип значений тега:</span>
+                                                            <span class="c1"># 0 = int,</span>
+                                                            <span class="c1"># 1 = float,</span>
+                                                            <span class="c1"># 2 = str</span>
+                                                            <span class="c1"># 4 = json</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3>Изменение конфигурации коннектора<a class="headerlink" href="#id7" title="Ссылка на этот заголовок"></a></h3>
+<p>Коннектор получает это сообщение в случае, когда меняется его конфигурация в платформе.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.connector_configuration&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="s2">&quot;prsEntityTypeCode&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{},</span>
+            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="s2">&quot;INFO&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;fileName&quot;</span><span class="p">:</span> <span class="s2">&quot;logs/prs_connector.log&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;maxBytes&quot;</span><span class="p">:</span> <span class="mi">10485760</span><span class="p">,</span>
+                <span class="s2">&quot;backupCount&quot;</span><span class="p">:</span> <span class="mi">10</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id8">
+<h3>Удаление коннектора<a class="headerlink" href="#id8" title="Ссылка на этот заголовок"></a></h3>
+<p>Коннектор получает это сообщение в случае, когда он удалён из иерархии.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.deleted&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;UUID&gt;&quot;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id9">
+<h3>Добавление нового тега(-ов) или изменение конфигурации тега(-ов)<a class="headerlink" href="#id9" title="Ссылка на этот заголовок"></a></h3>
+<p>Коннектор получает данное сообщение, если в список тегов, по которым он должен получать сообщение,
+добавляются новые теги или меняется конфигурация по существующим в списке тегам.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.tags_configuration&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">:</span> <span class="p">{</span>
+                <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{},</span>
+                    <span class="s2">&quot;maxDev&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>
+                    <span class="s2">&quot;JSONata&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;some jsonata expression&gt;&quot;</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;prsValueTypeCode&quot;</span><span class="p">:</span> <span class="mi">1</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id10">
+<h3>Удаление тегов из списка<a class="headerlink" href="#id10" title="Ссылка на этот заголовок"></a></h3>
+<p>Коннектор получает данное сообщение, если из списка тегов удаляются какие-либо теги.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.tags_deleted&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;&lt;tag_id1&gt;&quot;</span><span class="p">,</span> <span class="s2">&quot;&lt;tag_id2&gt;&quot;</span><span class="p">]</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="work_logic.html" class="btn btn-neutral float-left" title="Логика работы коннектора" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Предыдущая</a>
+        <a href="create_new_connector.html" class="btn btn-neutral float-right" title="Разработка нового коннектора" accesskey="n" rel="next">Следующая <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025, ООО МПК. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

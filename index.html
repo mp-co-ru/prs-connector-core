@@ -1,0 +1,157 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>prs-connector-core &mdash; документация prs-connector-core 0.8.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinxcontrib-httpexample.css" />
+      <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+
+  
+    <link rel="shortcut icon" href="_static/peresvet_middle.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=266874fb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/sphinxcontrib-httpexample.js"></script>
+      <script>let toggleHintShow = '';</script>
+      <script>let toggleHintHide = '';</script>
+      <script>let toggleOpenOnPrint = 'true';</script>
+      <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+      <script src="_static/translations.js?v=cd1d70c9"></script>
+      <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Описание" href="description.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#">
+            
+              <img src="_static/logo.png" class="logo" alt="Логотип"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1"><a class="reference internal" href="work_logic.html">Логика работы коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="message_format.html">Формат сообщений</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_new_connector.html">Разработка нового коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseconnector_class.html">Класс BaseConnector</a></li>
+<li class="toctree-l1"><a class="reference internal" href="taggroupreaderconnector_class.html">Класс TagGroupReaderConnector</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">prs-connector-core</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">prs-connector-core</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="prs-connector-core">
+<h1>prs-connector-core<a class="headerlink" href="#prs-connector-core" title="Ссылка на этот заголовок"></a></h1>
+<p><strong>prs-connector-core</strong> - пакет для языка Python.</p>
+<p>Главный класс, экспортируемый пакетом - <code class="docutils literal notranslate"><span class="pre">BaseConnector</span></code>.
+Этот класс реализует функциональность, общую для всех коннекторов платформы <a class="reference external" href="https://github.com/mp-co-ru/peresvet">Пересвет</a>.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1"><a class="reference internal" href="work_logic.html">Логика работы коннектора</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="work_logic.html#id2">Описание задач</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="message_format.html">Формат сообщений</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="message_format.html#id2">Сообщения от коннектора к платформе</a></li>
+<li class="toctree-l2"><a class="reference internal" href="message_format.html#id5">Сообщения от платформы коннектору</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="create_new_connector.html">Разработка нового коннектора</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="create_new_connector.html#indux">Самый простой коннектор для протокола InduX</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="baseconnector_class.html">Класс BaseConnector</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="baseconnector_class.html#id2">Атрибуты</a></li>
+<li class="toctree-l2"><a class="reference internal" href="baseconnector_class.html#id3">Методы</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="taggroupreaderconnector_class.html">Класс TagGroupReaderConnector</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="taggroupreaderconnector_class.html#id1">Атрибуты</a></li>
+<li class="toctree-l2"><a class="reference internal" href="taggroupreaderconnector_class.html#id2">Методы</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="description.html" class="btn btn-neutral float-right" title="Описание" accesskey="n" rel="next">Следующая <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025, ООО МПК. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

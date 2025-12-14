@@ -1,0 +1,222 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Класс BaseConnector &mdash; документация prs-connector-core 0.8.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinxcontrib-httpexample.css" />
+      <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+
+  
+    <link rel="shortcut icon" href="_static/peresvet_middle.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=266874fb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/sphinxcontrib-httpexample.js"></script>
+      <script>let toggleHintShow = '';</script>
+      <script>let toggleHintHide = '';</script>
+      <script>let toggleOpenOnPrint = 'true';</script>
+      <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+      <script src="_static/translations.js?v=cd1d70c9"></script>
+      <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Класс TagGroupReaderConnector" href="taggroupreaderconnector_class.html" />
+    <link rel="prev" title="Разработка нового коннектора" href="create_new_connector.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Логотип"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1"><a class="reference internal" href="work_logic.html">Логика работы коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="message_format.html">Формат сообщений</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_new_connector.html">Разработка нового коннектора</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Класс BaseConnector</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">Атрибуты</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">Методы</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="taggroupreaderconnector_class.html">Класс TagGroupReaderConnector</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">prs-connector-core</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Класс BaseConnector</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/baseconnector_class.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="baseconnector">
+<span id="id1"></span><h1>Класс BaseConnector<a class="headerlink" href="#baseconnector" title="Ссылка на этот заголовок"></a></h1>
+<p>Класс реализует значительную часть работы, общей для всех коннекторов платформы
+Пересвет.</p>
+<section id="id2">
+<h2>Атрибуты<a class="headerlink" href="#id2" title="Ссылка на этот заголовок"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">_loop</span></code> - петля событий.</p>
+<p><code class="docutils literal notranslate"><span class="pre">_config_from_platfrom</span></code> - полная конфигурация, полученная от платформы.</p>
+<p><code class="docutils literal notranslate"><span class="pre">_tag_cache</span></code> - кэш тегов вида:</p>
+<blockquote>
+<div><div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;JSONataExpr&quot;</span><span class="p">:</span> <span class="n">Jsonata</span><span class="p">(),</span>
+        <span class="s2">&quot;last_value&quot;</span><span class="p">:</span> <span class="o">...</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Если коннектору нужно дополнить кэш своими данными, то необходимо
+переопределить метод <code class="docutils literal notranslate"><span class="pre">_create_tag_cache</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">_logger</span></code> - журнал сообщений.</p>
+<p><code class="docutils literal notranslate"><span class="pre">_data_queue</span></code> - очередь данных для отправки в платформу.
+Метод <code class="docutils literal notranslate"><span class="pre">_read_tags</span></code> сам должен помещать новые данные
+в эту очередь.</p>
+</section>
+<section id="id3">
+<h2>Методы<a class="headerlink" href="#id3" title="Ссылка на этот заголовок"></a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span> <span class="pre">_read_tags(self)</span></code> - абстрактный метод в базовом классе,
+который необходимо переопределить в классах-наследниках.</p>
+<p>Реализует всю работу с источником данных.</p>
+<p>Запускается как отдельная задача.</p>
+<p>Каждый раз, когда коннектору приходит от платформы новая
+конфигурация, в которой исправлены данные о подключении к источнику данных,
+задача с методом <code class="docutils literal notranslate"><span class="pre">_read_tags</span></code> останавливается, изменения в конфигурации
+сохраняются и задача запускается снова.</p>
+<p>Метод должен помещать в очередь <code class="docutils literal notranslate"><span class="pre">_data_queue</span></code> данные, прочитанные из источника.
+Формат сообщений:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span>
+        <span class="p">{</span>
+            <span class="s2">&quot;tagId&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span>
+                <span class="p">[</span><span class="n">value</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">,</span> <span class="n">quality_code</span><span class="p">]</span>
+            <span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>где:</p>
+<p><code class="docutils literal notranslate"><span class="pre">value</span></code> - прочитанное из источника значение тега, обязательный параметр;</p>
+<p><code class="docutils literal notranslate"><span class="pre">timestamp</span></code> - метка времени, обязательный параметр;</p>
+<p><code class="docutils literal notranslate"><span class="pre">quality_code</span></code> - код качества, необязательный параметр;</p>
+<p>При разрыве связи с источником данных метод должен записать для каждого тега
+значение <code class="docutils literal notranslate"><span class="pre">None</span></code> с текущей меткой времени и с кодом качества 102 -
+разрыв связи с источником данных.</p>
+<p><code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span> <span class="pre">_create_tag_cache(self,</span> <span class="pre">tag_id:</span> <span class="pre">str)</span></code> - метод
+создания кэша для тега. Метод вызывается в следующих случаях:</p>
+<ul class="simple">
+<li><p>при старте коннектора, когда для каждого тега из конфигурации создаётся кэш;</p></li>
+<li><p>когда от платформы приходит сообщение о том, что к коннектору привязан новый тег;</p></li>
+<li><p>при изменении конфигурации тега: в этом случае сначала вызывается метод
+<code class="docutils literal notranslate"><span class="pre">_remove_tag_cache</span></code>.</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Предупреждение</p>
+<p>Если тег неактивен (атрибут <code class="docutils literal notranslate"><span class="pre">prsActive</span> <span class="pre">=</span> <span class="pre">True</span></code>), то кэше тега не создаётся,
+хотя метод <code class="docutils literal notranslate"><span class="pre">_create_tag_cache</span></code> вызывается.</p>
+</div>
+<p>Если при создании кэша тега необходимо сделать дополнительную работу, то
+переопределение метода должно иметь вид:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_create_tag_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tag_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_create_tag_cache</span><span class="p">(</span><span class="n">tag_id</span><span class="p">)</span>
+    <span class="c1"># дополнительная работа</span>
+</pre></div>
+</div>
+<p>В этом случае гарантируется, что тег <code class="docutils literal notranslate"><span class="pre">tag_id</span></code> уже находится в списке тегов в конфигурации:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="bp">self</span><span class="o">.</span><span class="n">_config_from_platfrom</span><span class="o">.</span><span class="n">tags</span><span class="p">[</span><span class="n">tag_id</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">async</span> <span class="pre">def</span> <span class="pre">_remove_tag_cache(self,</span> <span class="pre">tag_id:</span> <span class="pre">str)</span></code> - метод вызывается при удалении тега
+из списка привязанных к коннектору тегов, либо при изменении конфигурации тега:
+кэш тега удаляется, потом создаётся снова.</p>
+<p>Если при удалении тега из списка необходимо сделать какую-либо дополнительную работу,
+то переопределение метода должно иметь вид:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_remove_tag_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tag_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="c1"># дополнительная работа</span>
+
+    <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_remove_tag_cache</span><span class="p">(</span><span class="n">tag_id</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>В этом случае гарантируется, что тег ещё находится в списке и кэш его неудалён.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="create_new_connector.html" class="btn btn-neutral float-left" title="Разработка нового коннектора" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Предыдущая</a>
+        <a href="taggroupreaderconnector_class.html" class="btn btn-neutral float-right" title="Класс TagGroupReaderConnector" accesskey="n" rel="next">Следующая <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025, ООО МПК. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

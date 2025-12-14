@@ -1,0 +1,306 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Регистрация коннектора в платформе &mdash; документация prs-connector-core 0.8.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinxcontrib-httpexample.css" />
+      <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+
+  
+    <link rel="shortcut icon" href="_static/peresvet_middle.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=266874fb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/sphinxcontrib-httpexample.js"></script>
+      <script>let toggleHintShow = '';</script>
+      <script>let toggleHintHide = '';</script>
+      <script>let toggleOpenOnPrint = 'true';</script>
+      <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+      <script src="_static/translations.js?v=cd1d70c9"></script>
+      <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Логика работы коннектора" href="work_logic.html" />
+    <link rel="prev" title="Описание" href="description.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Логотип"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1"><a class="reference internal" href="work_logic.html">Логика работы коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="message_format.html">Формат сообщений</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_new_connector.html">Разработка нового коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseconnector_class.html">Класс BaseConnector</a></li>
+<li class="toctree-l1"><a class="reference internal" href="taggroupreaderconnector_class.html">Класс TagGroupReaderConnector</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">prs-connector-core</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Регистрация коннектора в платформе</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/registration.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="id1">
+<h1>Регистрация коннектора в платформе<a class="headerlink" href="#id1" title="Ссылка на этот заголовок"></a></h1>
+<p>Для того, чтобы платформа могла работать с коннектором,
+он должен быть в ней зарегистрирован.</p>
+<p>Регистрация коннектора в платформе выполняется POST-запросом
+<code class="docutils literal notranslate"><span class="pre">https://&lt;server_name&gt;/v1/connectors</span></code>:</p>
+<div class="http-example docutils container">
+<div class="http-example-http docutils container" id="id2">
+<p><span class="caption-text">http</span></p>
+<div class="highlight-http notranslate"><div class="highlight"><pre><span></span><span class="nf">POST</span> <span class="nn">/v1/connectors/</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+
+<span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;cn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;connector1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;prsJsonConfigString&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">            </span><span class="nt">&quot;log&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;INFO&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;fileName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logs/prs_connector.log&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;maxBytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10485760</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;backupCount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;description&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;prsEntityTypeCode&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;prsActive&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="nt">&quot;prsIndex&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;linkTags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;tagId&quot;</span><span class="p">:</span><span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;prsJsonConfigString&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">                    </span><span class="nt">&quot;maxDev&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;JSONata&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;some jsonata expression&gt;&quot;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="http-example-response docutils container" id="id3">
+<p><span class="caption-text">response</span></p>
+<div class="highlight-http notranslate"><div class="highlight"><pre><span></span><span class="nf">POST</span> <span class="nn">/v1/connectors/</span> <span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="o">:</span> <span class="l">localhost</span>
+<span class="na">Accept</span><span class="o">:</span> <span class="l">application/json</span>
+<span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+
+<span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;cn&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;connector1&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;prsJsonConfigString&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">            </span><span class="nt">&quot;log&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;INFO&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;fileName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logs/prs_connector.log&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;maxBytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10485760</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;backupCount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;description&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;prsEntityTypeCode&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;prsActive&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="nt">&quot;prsIndex&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;linkTags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;tagId&quot;</span><span class="p">:</span><span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;prsJsonConfigString&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">                    </span><span class="nt">&quot;maxDev&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;JSONata&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;some jsonata expression&gt;&quot;</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<p><strong>Запрос:</strong></p>
+<ul>
+<li><p><strong>attributes</strong> (dict) - словарь с параметрами для создания коннектора.
+Обязательный параметр.</p>
+<ul>
+<li><p><strong>cn</strong> (str) - имя коннектора. Необязательный атрибут. По умолчанию = <code class="docutils literal notranslate"><span class="pre">id</span></code> вновь созданного коннектора.</p></li>
+<li><p><strong>description</strong> (str) - описание коннектора. Необязательный атрибут.</p></li>
+<li><p><strong>prsEntityTypeCode</strong> (int) - Необязательный атрибут,
+может использоваться разработчиками коннекторов по своему усмотрению.</p></li>
+<li><p><strong>prsIndex</strong> (int) - Если у узлов одного уровня иерархии проставлены индексы, то
+перед отдачей клиенту списка экземпляров они сортируются
+в соответствии с их индексами. Необязательный атрибут.</p></li>
+<li><p><strong>prsActive</strong> (bool) - Определяет, активен ли коннектор. Необязательный атрибут. По умолчанию = <code class="docutils literal notranslate"><span class="pre">true</span></code>.</p></li>
+<li><p><strong>prsJsonConfigString</strong> (str) - Конфигурация коннектора.
+Имеет вид:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">    </span><span class="nt">&quot;log&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;INFO&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;fileName&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;logs/prs_connector.log&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;maxBytes&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10485760</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;backupCount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>где:</p>
+<blockquote>
+<div><ul>
+<li><p><strong>source</strong> (json) - информация для коннектора о том, как подключаться к источнику данных;</p>
+<p>Формат этого ключа целиком зависит от конкретной реализации коннектора и
+должен быть описан в его документации.</p>
+</li>
+<li><p><strong>log</strong> (json) - настройки логирования.</p></li>
+</ul>
+</div></blockquote>
+</li>
+</ul>
+</li>
+<li><p><strong>linkTags</strong> (list[json]) - список тегов, для которых коннектор должен поставлять данные.
+Необязательный атрибут.</p>
+<p>Каждый элемент списка - json, описывающий один привязанный к коннектору тег.</p>
+<p>Элемент имеет вид:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">   </span><span class="nt">&quot;tagId&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;tag_id&gt;&quot;</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;attributes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">       </span><span class="nt">&quot;prsJsonConfigString&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">           </span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">           </span><span class="nt">&quot;maxDev&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span>
+<span class="w">           </span><span class="nt">&quot;JSONata&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;some jsonata expression&gt;&quot;</span>
+<span class="w">       </span><span class="p">}</span>
+<span class="w">   </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>где:</p>
+<ul>
+<li><p><strong>tagId</strong> (str) - id прикрепляемого тега. Обязательный атрибут.</p></li>
+<li><p><strong>attributes</strong> (json) - json с параметрами для прилинкованного тега. Json имеет один ключ -
+<strong>prsJsonConfigString</strong>, который, в свою очередь, содержит три ключа:</p>
+<ul>
+<li><p><strong>source</strong> (dict) - информация для коннектора о том, каким образом получать данные тега из источника.</p>
+<p>Формат этого ключа целиком зависит от конкретной реализации коннектора и должен быть описан в его
+документации.</p>
+</li>
+<li><p><strong>maxDev</strong> (float) - максимально значимое отклонение значения тега. Если вновь прочитанное коннектором
+значение тега отличается от последнего, отправленного в платформу значения меньше, чем на указанную
+в <strong>maxDev</strong> величину, то новое значение тега просто игнорируется. Таким образом, с помощью этого ключа
+коннектор отсеивает незначащие отклонения параметров.</p>
+<p>Если в теге хранятся значения типов <code class="docutils literal notranslate"><span class="pre">str</span></code> или <code class="docutils literal notranslate"><span class="pre">json</span></code>, то если <code class="docutils literal notranslate"><span class="pre">maxDev</span> <span class="pre">=</span> <span class="pre">0</span></code>, то в платформу будет отсылаться
+каждое новое прочитанное значение тега. Если же <code class="docutils literal notranslate"><span class="pre">maxDev</span> <span class="pre">!=</span> <span class="pre">0</span></code>,
+то в платформу будет отсылаться новое прочитанное значение в том случае, если оно отличается от предыдущего.</p>
+</li>
+<li><p><strong>JSONata</strong> (str) - выражение на языке <a class="reference external" href="https://jsonata.org/">JSONata</a>, которое будет применяться к каждому прочитанному
+из источника значению тега.</p>
+<p>Если отсутствует, значение будет браться как есть.</p>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p><strong>Ответ:</strong></p>
+<blockquote>
+<div><ul class="simple">
+<li><p><strong>id</strong> (uuid) - id созданного коннектора.</p></li>
+<li><p><strong>detail</strong> (str) - пояснения к ошибке.</p></li>
+</ul>
+</div></blockquote>
+<div class="admonition note">
+<p class="admonition-title">Примечание</p>
+<p>Полученный в результате выполнения запроса идентификатор коннектора необходимо использовать
+в конфигурационном файле данного коннектора.</p>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="description.html" class="btn btn-neutral float-left" title="Описание" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Предыдущая</a>
+        <a href="work_logic.html" class="btn btn-neutral float-right" title="Логика работы коннектора" accesskey="n" rel="next">Следующая <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025, ООО МПК. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

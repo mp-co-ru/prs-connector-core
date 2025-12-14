@@ -1,0 +1,431 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Разработка нового коннектора &mdash; документация prs-connector-core 0.8.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinxcontrib-httpexample.css" />
+      <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+
+  
+    <link rel="shortcut icon" href="_static/peresvet_middle.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=266874fb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/sphinxcontrib-httpexample.js"></script>
+      <script>let toggleHintShow = '';</script>
+      <script>let toggleHintHide = '';</script>
+      <script>let toggleOpenOnPrint = 'true';</script>
+      <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+      <script src="_static/translations.js?v=cd1d70c9"></script>
+      <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Класс BaseConnector" href="baseconnector_class.html" />
+    <link rel="prev" title="Формат сообщений" href="message_format.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Логотип"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1"><a class="reference internal" href="work_logic.html">Логика работы коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="message_format.html">Формат сообщений</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Разработка нового коннектора</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#indux">Самый простой коннектор для протокола InduX</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Предварительная работа</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Код коннектора</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="baseconnector_class.html">Класс BaseConnector</a></li>
+<li class="toctree-l1"><a class="reference internal" href="taggroupreaderconnector_class.html">Класс TagGroupReaderConnector</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">prs-connector-core</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Разработка нового коннектора</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/create_new_connector.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="id1">
+<h1>Разработка нового коннектора<a class="headerlink" href="#id1" title="Ссылка на этот заголовок"></a></h1>
+<div class="admonition attention">
+<p class="admonition-title">Внимание</p>
+<p>В документации используется термин «привязка»: тег «привязан» к коннектору.
+Это означает, что коннектор должен поставлять данные для этого тега.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Примечание</p>
+<p>Предположим, что создан проект для нового коннектора и установлен пакет <code class="docutils literal notranslate"><span class="pre">prs_connector_core</span></code>.</p>
+</div>
+<section id="indux">
+<h2>Самый простой коннектор для протокола InduX<a class="headerlink" href="#indux" title="Ссылка на этот заголовок"></a></h2>
+<p>В качестве примера напишем самый простой коннектор для некоторого выдуманного протокола <code class="docutils literal notranslate"><span class="pre">InduX</span></code>.</p>
+<p>Допустим, протокол не предполагает подписки на изменения значения параметров,
+и данные клиенту необходимо читать самому с определённой частотой.</p>
+<p>Кроме того, для того, чтобы не возиться с низкоуровневым разбором байтов, предположим, что у нас есть
+пакет <code class="docutils literal notranslate"><span class="pre">py_indux</span></code> для чтения данных с устройств, работающих по протоколу <code class="docutils literal notranslate"><span class="pre">InduX</span></code>.</p>
+<section id="id2">
+<h3>Предварительная работа<a class="headerlink" href="#id2" title="Ссылка на этот заголовок"></a></h3>
+<p>Перед разработкой коннектора необходимо определить:</p>
+<ol class="arabic simple">
+<li><p>Способ связи с устройством, работающим по этому протоколу и, соответственно, какая информация необходима коннектору,
+чтобы он мог связаться с источником данных.</p></li>
+<li><p>Как получать данные для определённого параметра (тега) из источника.</p></li>
+</ol>
+<div class="dropdown admonition">
+<p class="admonition-title">Пример для протокола Modbus RTU</p>
+<blockquote>
+<div><p>Для связи с устройством необходимо знать:</p>
+<ul class="simple">
+<li><p>порт, на котором «висит» устройство;</p></li>
+<li><p>скорость передачи данных;</p></li>
+<li><p>количество бит в байте;</p></li>
+<li><p>проверка чётности;</p></li>
+<li><p>количество стоп-бит;</p></li>
+<li><p>таймаут</p></li>
+</ul>
+<p>Таким образом, коннектору для связи с устройством необходимо передать всю эту информацию
+примерно в такой структуре:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="s2">&quot;/dev/ttyUSB0&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;baudrate&quot;</span><span class="p">:</span> <span class="mi">115200</span><span class="p">,</span>
+    <span class="s2">&quot;bytesize&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+    <span class="s2">&quot;parity&quot;</span><span class="p">:</span> <span class="s2">&quot;N&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;stopbits&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="mi">3</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Для чтения данных какого-либо параметра необходимо знать:</p>
+<ul class="simple">
+<li><p>тип регистров</p></li>
+<li><p>номер стартового регистра</p></li>
+<li><p>количество регистров для чтения</p></li>
+<li><p>тип хранимого значения</p></li>
+<li><p>номер устройства</p></li>
+</ul>
+<p>Таким образом, каждый тег, привязанный к коннектору, должен содержать примерно такую структуру:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;regType&quot;</span><span class="p">:</span> <span class="s2">&quot;H&quot;</span><span class="p">,</span>        <span class="c1"># H - holding, D - discrete, C - coils, I - input</span>
+    <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>          <span class="c1"># адрес регистра для чтения</span>
+    <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>            <span class="c1"># количество регистров, которые необходимо прочитать</span>
+    <span class="s2">&quot;slave&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>            <span class="c1"># номер устройства</span>
+    <span class="s2">&quot;dataType&quot;</span><span class="p">:</span> <span class="s2">&quot;FLOAT32&quot;</span><span class="p">,</span> <span class="c1"># тип хранимого значения</span>
+    <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="mi">5</span>         <span class="c1"># частота (в секундах), с которой необходимо читать значение тега</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Предположим, что к коннектору привязан только один тег.
+Тогда, в конечном итоге, при старте коннектор должен получить
+полную конфигурацию от платформы примерно такого вида:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.full_configuration&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>              <span class="c1"># коннектор активен</span>
+        <span class="s2">&quot;prsEntityTypeCode&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>      <span class="c1"># не обращаем внимания</span>
+        <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>                 <span class="c1"># как подключаться к источнику данных</span>
+                <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="s2">&quot;/dev/ttyUSB0&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;baudrate&quot;</span><span class="p">:</span> <span class="mi">115200</span><span class="p">,</span>
+                <span class="s2">&quot;bytesize&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+                <span class="s2">&quot;parity&quot;</span><span class="p">:</span> <span class="s2">&quot;N&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;stopbits&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="mi">3</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="p">{</span>                <span class="c1"># конфигурация журнала логов</span>
+                <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="s2">&quot;INFO&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;fileName&quot;</span><span class="p">:</span> <span class="s2">&quot;logs/prs_connector.log&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;maxBytes&quot;</span><span class="p">:</span> <span class="mi">10485760</span><span class="p">,</span>
+                <span class="s2">&quot;backupCount&quot;</span><span class="p">:</span> <span class="mi">10</span>
+            <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>                                           <span class="c1"># список тегов, привязанных к коннектору</span>
+            <span class="s2">&quot;ac620c9e-8fd1-103f-9850-bf1c6e0c417e&quot;</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># идентификатор тега</span>
+                <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>                          <span class="c1"># флаг активности тега</span>
+                <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>                             <span class="c1"># способ получения данных тега из источника</span>
+                        <span class="s2">&quot;regType&quot;</span><span class="p">:</span> <span class="s2">&quot;H&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;address&quot;</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>
+                        <span class="s2">&quot;count&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>
+                        <span class="s2">&quot;slave&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                        <span class="s2">&quot;dataType&quot;</span><span class="p">:</span> <span class="s2">&quot;FLOAT32&quot;</span><span class="p">,</span>
+                        <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="mi">5</span>
+                    <span class="p">},</span>
+                    <span class="s2">&quot;maxDev&quot;</span><span class="p">:</span> <span class="mf">0.5</span><span class="p">,</span>                          <span class="c1"># минимальное значимое отклонение значения</span>
+                    <span class="s2">&quot;JSONata&quot;</span><span class="p">:</span> <span class="s2">&quot;$abs($)&gt;0?1:0&quot;</span>              <span class="c1"># предположим, что в источнике данных</span>
+                                                            <span class="c1"># по указанному адресу хранится мгновенное значение</span>
+                                                            <span class="c1"># тока</span>
+                                                            <span class="c1"># а наш тег - это флаг того, работает устройство или нет</span>
+                                                            <span class="c1"># соответственно, если ток &gt; 0, то устройство работает</span>
+                                                            <span class="c1"># записанное в этом ключе JSONata выражение</span>
+                                                            <span class="c1"># будет делать то, что нам надо:</span>
+                                                            <span class="c1"># возращать 1, если ток &gt; 0 и 0 в противном случае</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;prsValueTypeCode&quot;</span><span class="p">:</span> <span class="mi">0</span>                       <span class="c1"># тип значений тега:</span>
+                                                            <span class="c1"># 0 = int</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</div></blockquote>
+</div>
+<p>Допустим, протокол <code class="docutils literal notranslate"><span class="pre">InduX</span></code> очень прост:</p>
+<ol class="arabic simple">
+<li><p>Устройство подключается через порт USB и имя подключаемого порта - <code class="docutils literal notranslate"><span class="pre">/dev/ttyUSB0</span></code>.</p></li>
+<li><p>Для чтения текущего значения какого-либо параметра из устройства достаточно указать его имя.</p></li>
+</ol>
+<div class="admonition attention">
+<p class="admonition-title">Внимание</p>
+<p>Для упрощения кода примем, что теги читаются из источника с одной, общей для всех частотой, поэтому
+эта частота указывается в конфигурации всего коннектора, а не для каждого тега отдельно.</p>
+</div>
+<p>Таким образом, полная конфигурация, которая будет приходить коннектору, примет примерно такой вид:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="s2">&quot;action&quot;</span><span class="p">:</span> <span class="s2">&quot;prsConnector.full_configuration&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>              <span class="c1"># коннектор активен</span>
+        <span class="s2">&quot;prsEntityTypeCode&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>      <span class="c1"># не обращаем внимания</span>
+        <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>                 <span class="c1"># как подключаться к источнику данных</span>
+                <span class="s2">&quot;port&quot;</span><span class="p">:</span> <span class="s2">&quot;/dev/ttyUSB0&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;baudrate&quot;</span><span class="p">:</span> <span class="mi">115200</span><span class="p">,</span>
+                <span class="s2">&quot;bytesize&quot;</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>
+                <span class="s2">&quot;parity&quot;</span><span class="p">:</span> <span class="s2">&quot;N&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;stopbits&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+                <span class="s2">&quot;timeout&quot;</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+                <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="mi">1</span>         <span class="c1"># частота чтения данных из источника</span>
+            <span class="p">},</span>
+            <span class="s2">&quot;log&quot;</span><span class="p">:</span> <span class="p">{</span>                <span class="c1"># конфигурация журнала логов</span>
+                <span class="s2">&quot;level&quot;</span><span class="p">:</span> <span class="s2">&quot;INFO&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;fileName&quot;</span><span class="p">:</span> <span class="s2">&quot;logs/prs_connector.log&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;maxBytes&quot;</span><span class="p">:</span> <span class="mi">10485760</span><span class="p">,</span>
+                <span class="s2">&quot;backupCount&quot;</span><span class="p">:</span> <span class="mi">10</span>
+            <span class="p">}</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="p">{</span>                                           <span class="c1"># Список тегов, привязанных к коннектору.</span>
+            <span class="s2">&quot;ac620c9e-8fd1-103f-9850-bf1c6e0c417e&quot;</span><span class="p">:</span> <span class="p">{</span>       <span class="c1"># Идентификатор тега.</span>
+                                                            <span class="c1"># Допустим, тег - это ток,</span>
+                                                            <span class="c1"># причём источник отдаёт данные в виде</span>
+                                                            <span class="c1"># целого числа, в миллиамперах.</span>
+                                                            <span class="c1"># Модель же, реализованная в платформе, предполагает,</span>
+                                                            <span class="c1"># что ток - вещественное числои и измеряется в амперах.</span>
+                                                            <span class="c1"># Соответственно, прочитанное значение нам нужно</span>
+                                                            <span class="c1"># разделить на 1000.</span>
+                <span class="s2">&quot;prsActive&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>                          <span class="c1"># флаг активности тега</span>
+                <span class="s2">&quot;prsJsonConfigString&quot;</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="p">{</span>                             <span class="c1"># способ получения данных тега из источника</span>
+                        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;current&quot;</span>
+                    <span class="p">},</span>
+                    <span class="s2">&quot;maxDev&quot;</span><span class="p">:</span> <span class="mf">0.1</span><span class="p">,</span>                          <span class="c1"># минимальное значимое отклонение - 0.1 А</span>
+                    <span class="s2">&quot;JSONata&quot;</span><span class="p">:</span> <span class="s2">&quot;$/1000&quot;</span>                     <span class="c1"># выражение преобразует миллиамперы в амперы</span>
+                <span class="p">},</span>
+                <span class="s2">&quot;prsValueTypeCode&quot;</span><span class="p">:</span> <span class="mi">0</span>                       <span class="c1"># тип значений тега:</span>
+                                                            <span class="c1"># 1 = float</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3>Код коннектора<a class="headerlink" href="#id3" title="Ссылка на этот заголовок"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">  1</span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="linenos">  2</span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="linenos">  3</span><span class="kn">from</span><span class="w"> </span><span class="nn">time</span><span class="w"> </span><span class="kn">import</span> <span class="n">time</span>
+<span class="linenos">  4</span><span class="c1"># включаем в проект пакет для низкоуровневой работы с протоколом InduX</span>
+<span class="linenos">  5</span><span class="kn">from</span><span class="w"> </span><span class="nn">py_indux</span><span class="w"> </span><span class="kn">import</span> <span class="n">InduXClient</span><span class="p">,</span> <span class="n">InduXException</span>
+<span class="linenos">  6</span><span class="c1"># из пакета с базовым классом коннектора</span>
+<span class="linenos">  7</span><span class="c1"># импортируем сам базовый класс и функцию,</span>
+<span class="linenos">  8</span><span class="c1"># возвращающую текущую метку времени</span>
+<span class="linenos">  9</span><span class="kn">from</span><span class="w"> </span><span class="nn">prs_connector_core</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseConnector</span><span class="p">,</span> <span class="n">ts</span><span class="p">,</span> <span class="n">main</span>
+<span class="linenos"> 10</span>
+<span class="linenos"> 11</span><span class="k">class</span><span class="w"> </span><span class="nc">InduXConnector</span><span class="p">(</span><span class="n">BaseConnector</span><span class="p">):</span>
+<span class="linenos"> 12</span>
+<span class="linenos"> 13</span>    <span class="c1"># В общем случае, это единственный метод, который мы должны переопределить у базового класса.</span>
+<span class="linenos"> 14</span>    <span class="c1"># Метод запускается базовым классом в виде отдельной задачи</span>
+<span class="linenos"> 15</span>    <span class="c1"># каждый раз, когда от платформы приходит исправленная конфигурация</span>
+<span class="linenos"> 16</span>    <span class="c1"># (не считая изменений, касающихся тегов, для них - отдельные сообщения).</span>
+<span class="linenos"> 17</span>    <span class="c1"># Таким образом, метод _read_tags останавливается и после обновления конфигурации запускается вновь</span>
+<span class="linenos"> 18</span>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">_read_tags</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="linenos"> 19</span>
+<span class="linenos"> 20</span>        <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">get_data</span><span class="p">():</span>
+<span class="linenos"> 21</span>            <span class="c1"># Для упрощения предположим, что коннектор читает все теги из источника</span>
+<span class="linenos"> 22</span>            <span class="c1"># с одной частотой.</span>
+<span class="linenos"> 23</span>            <span class="c1"># В противном случае придётся разбивать теги по группам в зависимости от частоты</span>
+<span class="linenos"> 24</span>            <span class="c1"># чтения и запускать для каждой группы свою задачу чтения данных из источника.</span>
+<span class="linenos"> 25</span>            <span class="n">interval</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_from_platfrom</span><span class="o">.</span><span class="n">prsJsonConfigString</span><span class="o">.</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;frequency&quot;</span><span class="p">]</span>
+<span class="linenos"> 26</span>            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+<span class="linenos"> 27</span>
+<span class="linenos"> 28</span>                <span class="c1"># Зафиксируем время начала выполнения чтения.</span>
+<span class="linenos"> 29</span>                <span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span>
+<span class="linenos"> 30</span>
+<span class="linenos"> 31</span>                <span class="c1"># Заготовка для пакета данных.</span>
+<span class="linenos"> 32</span>                <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+<span class="linenos"> 33</span>                <span class="c1"># Время в платформе хранится как количество микросекунд, прошедших, начиная</span>
+<span class="linenos"> 34</span>                <span class="c1"># с 01-01-1970 00:00:00 UTC.</span>
+<span class="linenos"> 35</span>                <span class="c1"># Функция ts() текущую метку времени в указанном формате.</span>
+<span class="linenos"> 36</span>                <span class="c1"># Предполагаем, что источник данных не возвращает метку времени вместе со значением,</span>
+<span class="linenos"> 37</span>                <span class="c1"># поэтому мы должны присвоить её сами.</span>
+<span class="linenos"> 38</span>                <span class="n">current_time</span> <span class="o">=</span> <span class="n">ts</span><span class="p">()</span>
+<span class="linenos"> 39</span>                <span class="c1"># пробегаем циклом по всем тегам в конфигурации</span>
+<span class="linenos"> 40</span>                <span class="k">for</span> <span class="n">tag_id</span><span class="p">,</span> <span class="n">tag_config</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_from_platfrom</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
+<span class="linenos"> 41</span>
+<span class="linenos"> 42</span>                    <span class="c1"># читаем значение каждого тега из конфигурации</span>
+<span class="linenos"> 43</span>                    <span class="n">value</span> <span class="o">=</span> <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">tag_config</span><span class="o">.</span><span class="n">prsJsonConfigString</span><span class="o">.</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">])</span>
+<span class="linenos"> 44</span>                    <span class="c1"># формируем пакет данных</span>
+<span class="linenos"> 45</span>                    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+<span class="linenos"> 46</span>
+<span class="linenos"> 47</span>                        <span class="p">{</span>
+<span class="linenos"> 48</span>                            <span class="s2">&quot;tagId&quot;</span><span class="p">:</span> <span class="n">tag_id</span><span class="p">,</span>
+<span class="linenos"> 49</span>                            <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[</span>
+<span class="linenos"> 50</span>
+<span class="linenos"> 51</span>                                <span class="p">[</span><span class="n">value</span><span class="p">,</span> <span class="n">current_time</span><span class="p">]</span>
+<span class="linenos"> 52</span>
+<span class="linenos"> 53</span>                            <span class="p">]</span>
+<span class="linenos"> 54</span>
+<span class="linenos"> 55</span>                        <span class="p">}</span>
+<span class="linenos"> 56</span>
+<span class="linenos"> 57</span>                    <span class="p">)</span>
+<span class="linenos"> 58</span>
+<span class="linenos"> 59</span>                <span class="c1"># Помещаем сформированный пакет данных в очередь сообщений.</span>
+<span class="linenos"> 60</span>                <span class="bp">self</span><span class="o">.</span><span class="n">_data_queue</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="linenos"> 61</span>
+<span class="linenos"> 62</span>                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Цикл чтения данных завершён.&quot;</span><span class="p">)</span>
+<span class="linenos"> 63</span>
+<span class="linenos"> 64</span>                <span class="c1"># Считаем, сколько времени заняло чтение данных.</span>
+<span class="linenos"> 65</span>                <span class="n">elapsed</span> <span class="o">=</span> <span class="n">time</span><span class="p">()</span> <span class="o">-</span> <span class="n">start_time</span>
+<span class="linenos"> 66</span>                <span class="n">wait_time</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">interval</span> <span class="o">-</span> <span class="n">elapsed</span><span class="p">)</span>
+<span class="linenos"> 67</span>                <span class="c1"># Делаем задержку между циклами чтения.</span>
+<span class="linenos"> 68</span>                <span class="k">await</span> <span class="n">asyncio</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="n">wait_time</span><span class="p">)</span>
+<span class="linenos"> 69</span>
+<span class="linenos"> 70</span>        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+<span class="linenos"> 71</span>            <span class="k">try</span><span class="p">:</span>
+<span class="linenos"> 72</span>                <span class="c1"># Соединяемся с источником данных</span>
+<span class="linenos"> 73</span>                <span class="n">source</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_from_platfrom</span><span class="o">.</span><span class="n">prsJsonConfigString</span><span class="o">.</span><span class="n">source</span>
+<span class="linenos"> 74</span>                <span class="bp">self</span><span class="o">.</span><span class="n">_client</span> <span class="o">=</span> <span class="n">InduXClient</span><span class="p">(</span>
+<span class="linenos"> 75</span>
+<span class="linenos"> 76</span>                    <span class="n">port</span><span class="o">=</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;port&quot;</span><span class="p">],</span>
+<span class="linenos"> 77</span>                    <span class="n">baudrate</span><span class="o">=</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;baudrate&quot;</span><span class="p">],</span>
+<span class="linenos"> 78</span>                    <span class="n">bytesize</span><span class="o">=</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;bytesize&quot;</span><span class="p">],</span>
+<span class="linenos"> 79</span>                    <span class="n">parity</span><span class="o">=</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;parity&quot;</span><span class="p">],</span>
+<span class="linenos"> 80</span>                    <span class="n">stopbits</span><span class="o">=</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;stopbits&quot;</span><span class="p">],</span>
+<span class="linenos"> 81</span>                    <span class="n">timeout</span><span class="o">=</span><span class="n">source</span><span class="p">[</span><span class="s2">&quot;timeout&quot;</span><span class="p">]</span>
+<span class="linenos"> 82</span>
+<span class="linenos"> 83</span>                <span class="p">)</span>
+<span class="linenos"> 84</span>
+<span class="linenos"> 85</span>                <span class="k">await</span> <span class="bp">self</span><span class="o">.</span><span class="n">_client</span><span class="o">.</span><span class="n">connect</span><span class="p">()</span>
+<span class="linenos"> 86</span>
+<span class="linenos"> 87</span>                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Соединение с источником установлено.&quot;</span><span class="p">)</span>
+<span class="linenos"> 88</span>
+<span class="linenos"> 89</span>                <span class="c1"># Запускаем цикл чтения данных.</span>
+<span class="linenos"> 90</span>                <span class="k">await</span> <span class="n">get_data</span><span class="p">()</span>
+<span class="linenos"> 91</span>            <span class="k">except</span> <span class="n">InduXException</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+<span class="linenos"> 92</span>                <span class="bp">self</span><span class="o">.</span><span class="n">_logger</span><span class="o">.</span><span class="n">exception</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Ошибка чтения данных: </span><span class="si">{</span><span class="n">ex</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos"> 93</span>
+<span class="linenos"> 94</span>                <span class="c1"># При ошибке чтения записываем в каждый тег значение None</span>
+<span class="linenos"> 95</span>                <span class="c1"># с кодом качества = 102, что обозначает разрыв связи коннектора</span>
+<span class="linenos"> 96</span>                <span class="c1"># с источником данных.</span>
+<span class="linenos"> 97</span>                <span class="n">data</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[]}</span>
+<span class="linenos"> 98</span>                <span class="n">current_time</span> <span class="o">=</span> <span class="n">ts</span><span class="p">()</span>
+<span class="linenos"> 99</span>                <span class="k">for</span> <span class="n">tag_id</span><span class="p">,</span> <span class="n">tag_config</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config_from_platfrom</span><span class="o">.</span><span class="n">tags</span><span class="p">:</span>
+<span class="linenos">100</span>
+<span class="linenos">101</span>                    <span class="n">data</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+<span class="linenos">102</span>
+<span class="linenos">103</span>                        <span class="p">{</span><span class="s2">&quot;tagId&quot;</span><span class="p">:</span> <span class="n">tag_id</span><span class="p">,</span> <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">[[</span><span class="kc">None</span><span class="p">,</span> <span class="n">current_time</span><span class="p">,</span> <span class="mi">102</span><span class="p">]]}</span>
+<span class="linenos">104</span>
+<span class="linenos">105</span>                    <span class="p">)</span>
+<span class="linenos">106</span>
+<span class="linenos">107</span>                <span class="bp">self</span><span class="o">.</span><span class="n">_data_queue</span><span class="o">.</span><span class="n">put_nowait</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="linenos">108</span>
+<span class="linenos">109</span><span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+<span class="linenos">110</span>    <span class="n">main</span><span class="p">(</span><span class="n">InduXConnector</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="message_format.html" class="btn btn-neutral float-left" title="Формат сообщений" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Предыдущая</a>
+        <a href="baseconnector_class.html" class="btn btn-neutral float-right" title="Класс BaseConnector" accesskey="n" rel="next">Следующая <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025, ООО МПК. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,235 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="ru" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Логика работы коннектора &mdash; документация prs-connector-core 0.8.0</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/sphinxcontrib-httpexample.css" />
+      <link rel="stylesheet" type="text/css" href="_static/togglebutton.css?v=13237357" />
+
+  
+    <link rel="shortcut icon" href="_static/peresvet_middle.png"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=266874fb"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/sphinxcontrib-httpexample.js"></script>
+      <script>let toggleHintShow = '';</script>
+      <script>let toggleHintHide = '';</script>
+      <script>let toggleOpenOnPrint = 'true';</script>
+      <script src="_static/togglebutton.js?v=4a39c7ea"></script>
+      <script src="_static/translations.js?v=cd1d70c9"></script>
+      <script>var togglebuttonSelector = '.toggle, .admonition.dropdown';</script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="next" title="Формат сообщений" href="message_format.html" />
+    <link rel="prev" title="Регистрация коннектора в платформе" href="registration.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html">
+            
+              <img src="_static/logo.png" class="logo" alt="Логотип"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Поиск в документации" aria-label="Поиск в документации" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Меню навигации">
+              <p class="caption" role="heading"><span class="caption-text">Содержание:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="description.html">Описание</a></li>
+<li class="toctree-l1"><a class="reference internal" href="registration.html">Регистрация коннектора в платформе</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Логика работы коннектора</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">Описание задач</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Обработка сообщений от платформы</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id4">Чтение данных из источника</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">Отправка данных в платформу</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id6">Обработка буфера данных</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="message_format.html">Формат сообщений</a></li>
+<li class="toctree-l1"><a class="reference internal" href="create_new_connector.html">Разработка нового коннектора</a></li>
+<li class="toctree-l1"><a class="reference internal" href="baseconnector_class.html">Класс BaseConnector</a></li>
+<li class="toctree-l1"><a class="reference internal" href="taggroupreaderconnector_class.html">Класс TagGroupReaderConnector</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Меню навигации для мобильных устройств" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">prs-connector-core</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Навигация по страницам">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Логика работы коннектора</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/work_logic.rst.txt" rel="nofollow"> Просмотреть исходный код страницы</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="id1">
+<h1>Логика работы коннектора<a class="headerlink" href="#id1" title="Ссылка на этот заголовок"></a></h1>
+<p>Предполагаем, что коннектор зарегистрирован в платформе и имеет идентификатор: <code class="docutils literal notranslate"><span class="pre">&lt;connector_id&gt;</span></code>.</p>
+<ol class="arabic">
+<li><p>На устройстве, на котором будет работать конфигуратор, создаём конфигурационный файл
+вида:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+    <span class="nb">id</span><span class="p">:</span> <span class="s2">&quot;&lt;connector_id&gt;&quot;</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="s2">&quot;mqtts://&lt;peresvet_server&gt;&quot;</span>
+    <span class="n">ssl</span><span class="p">:</span> <span class="p">{</span>
+        <span class="n">certFile</span><span class="p">:</span> <span class="s2">&quot;&lt;path_to_certificate_file&gt;&quot;</span><span class="p">,</span> <span class="c1"># путь к файлу сертификата</span>
+        <span class="n">keyFile</span><span class="p">:</span> <span class="s2">&quot;&lt;path_to_key_file&gt;&quot;</span><span class="p">,</span> <span class="c1"># путь к файлу с приватным ключом</span>
+        <span class="n">caFile</span><span class="p">:</span> <span class="s2">&quot;&lt;path_to_ca_file&gt;&quot;</span><span class="p">,</span> <span class="c1"># путь к файлу сертификата удостоверяющего центра</span>
+        <span class="n">certsRequired</span><span class="p">:</span> <span class="s2">&quot;CERT_NONE&quot;</span> <span class="c1"># CERTS_NONE | CERTS_OPTIONAL | CERTS_REQUIRED</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<dl class="simple">
+<dt>где:</dt><dd><ul class="simple">
+<li><p><strong>id</strong> - идентификатор коннектора в платформе.</p></li>
+<li><p><strong>url</strong> - строка коннекта к платформе. В случае, если протокол <code class="docutils literal notranslate"><span class="pre">mqtts</span></code>, то необходим раздел
+конфигурации <code class="docutils literal notranslate"><span class="pre">ssl</span></code>.</p></li>
+<li><p><strong>ssl</strong> - параметры безопасности для работы по протоколу SSL.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition note">
+<p class="admonition-title">Примечание</p>
+<p>Файл конфигурации содержит необходимый минимум информации для связи коннектора с платформой.</p>
+<p>Полную информацию для работы коннектор получает от платформы.</p>
+<p>Этим достигается централизация управления системой: настроить работу коннектора можно,
+исправив его конфигурацию в платформе. Внесённые изменения будут применены коннектором
+в режиме онлайн.</p>
+</div>
+</li>
+<li><p>Запускаем коннектор в работу:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>python<span class="w"> </span>&lt;connector&gt;.py<span class="w"> </span>&lt;path_to_config_file&gt;
+</pre></div>
+</div>
+<p>В случае, если в строке запуска не указан путь к файлу конфигурации, то
+по умолчанию принимается, что файл конфигурации называется <code class="docutils literal notranslate"><span class="pre">config.json</span></code>
+и находится в текущем каталоге.</p>
+</li>
+<li><p>Коннектор читает сохранённую на диске конфигурацию, полученную от платформы при предыдущем
+сеансе запуска и начинает работать согласно этой конфигурации.</p>
+<p>Если это первый запуск коннектора до этого связи с платформой не было, этот шаг пропускается.</p>
+</li>
+<li><p>Коннектор запускает на исполнение четыре независимых задачи,
+которые исполняются как бесконечные циклы:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#id3">Обработка сообщений от платформы</a></p></li>
+<li><p><a class="reference internal" href="#id4">Чтение данных из источника</a></p></li>
+<li><p><a class="reference internal" href="#id5">Отправка данных в платформу</a></p></li>
+<li><p><a class="reference internal" href="#id6">Обработка буфера данных</a></p></li>
+</ul>
+</li>
+<li><p>Основной цикл работы коннектора также бесконечен:
+коннектор пытается установить связь с платформой. Каждый раз, когда связь устанавливается,
+коннектор посылает в платформу запрос на получение полной конфигурации.</p>
+<p>Если полученная конфигурация отличается от старой, то задача чтения данных из источника
+останавливается, и запускается по-новой, в соответствии с новой конфигурацией.</p>
+</li>
+</ol>
+<section id="id2">
+<h2>Описание задач<a class="headerlink" href="#id2" title="Ссылка на этот заголовок"></a></h2>
+<section id="id3">
+<h3>Обработка сообщений от платформы<a class="headerlink" href="#id3" title="Ссылка на этот заголовок"></a></h3>
+<p>Коннектор может принимать от платформы сообщения, связанные с изменением его конфигурации:</p>
+<ul class="simple">
+<li><p>изменение параметров подключения к источнику данных,</p></li>
+<li><p>изменения в конфигурации журнала логов,</p></li>
+<li><p>изменения списка привязанных тегов,</p></li>
+<li><p>изменения параметров привязанных тегов.</p></li>
+</ul>
+</section>
+<section id="id4">
+<h3>Чтение данных из источника<a class="headerlink" href="#id4" title="Ссылка на этот заголовок"></a></h3>
+<p>Это единственный метод, который необходимо полностью определять в каждой реализации коннектора.
+Метод чтения данных должен помещать прочитанные данные в очередь данных. Вся обработка данных
+будет проводиться базовым классом коннектора в зависимости от указанных в конфигурации параметров.</p>
+</section>
+<section id="id5">
+<h3>Отправка данных в платформу<a class="headerlink" href="#id5" title="Ссылка на этот заголовок"></a></h3>
+<p>При наличии в очереди данных сообщений коннектор обрабатывает каждое сообщение.</p>
+<p>Каждое сообщение - это массив данных тега(-ов).</p>
+<p>Если у значения нет метки времени, коннектор добавит текущую метку времени.</p>
+<p>Каждое значение тега:</p>
+<ol class="arabic simple">
+<li><p>Конвертируется с помощью JSONata.</p></li>
+<li><p>Преобразуется к нужному типу данных, хранимых в теге.</p></li>
+<li><p>Если разница между последним посланным в платформу значением и текущим больше указанного
+в параметре <code class="docutils literal notranslate"><span class="pre">maxDev</span></code> предела, то значение будет отправлено в платформу, если связь с платформой разорвана,
+то значение будет помещено в буфер.</p></li>
+</ol>
+</section>
+<section id="id6">
+<h3>Обработка буфера данных<a class="headerlink" href="#id6" title="Ссылка на этот заголовок"></a></h3>
+<p>Коннектор периодически проверяет наличие буфера данных. Если буфер есть и есть связь с платформой, то
+данные из буфера отсылаются в платформу.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Нижняя область">
+        <a href="registration.html" class="btn btn-neutral float-left" title="Регистрация коннектора в платформе" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Предыдущая</a>
+        <a href="message_format.html" class="btn btn-neutral float-right" title="Формат сообщений" accesskey="n" rel="next">Следующая <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Авторские права 2025, ООО МПК. </p>
+  </div>
+
+  Собрано при помощи <a href="https://www.sphinx-doc.org/">Sphinx</a> с использованием
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">темы,</a>
+    предоставленной <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

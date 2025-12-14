@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "prs_connector_core"
-version = "0.7.1"
+version = "0.8.0"
 description = "Базовый модуль для коннекторов платформы Пересвет"
 authors = [
     {name = "ООО МПК", email = "info@mp-co.ru"},
@@ -25,7 +25,8 @@ dependencies = [
     "pydantic==2.11.3",
     "pydantic_core==2.33.1",
     "aiofiles==24.1.0",
-    "ciso8601==2.3.2"
+    "ciso8601==2.3.2",
+    "python-dateutil==2.9.0.post0"
 ]
 
 [project.urls]

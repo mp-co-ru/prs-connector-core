@@ -6,7 +6,7 @@ from py_indux import InduXClient, InduXException
 # из пакета с базовым классом коннектора
 # импортируем сам базовый класс и функцию,
 # возвращающую текущую метку времени
-from prs_connector_core import BaseConnector, ts
+from prs_connector_core import BaseConnector, ts, main
 
 class InduXConnector(BaseConnector):
 
@@ -107,15 +107,4 @@ class InduXConnector(BaseConnector):
                 self._data_queue.put_nowait(data)
 
 if __name__ == "__main__":
-    # Коннектор запускается на исполнение с одним аргументом - именем файла конфигурации.
-    # По умолчанию это - config.json
-    if len(sys.argv) > 1:
-
-        conf_file = sys.argv[1]
-
-    else:
-
-        conf_file = 'config.json'
-
-    conn = InduXConnector(conf_file)
-    asyncio.run(conn.run())
+    main(InduXConnector)

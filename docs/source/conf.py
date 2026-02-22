@@ -6,11 +6,16 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
+from importlib.metadata import PackageNotFoundError, version as package_version
+
 project = 'prs-connector-core'
 copyright = '2025, ООО МПК'
 author = 'ООО МПК'
-release = '0.8.0'
-version = '0.8.0'
+try:
+    release = package_version("prs_connector_core")
+except PackageNotFoundError:
+    release = "0.0.0.dev0"
+version = release
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

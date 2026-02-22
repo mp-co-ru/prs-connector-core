@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=65.0", "wheel"]
+requires = ["setuptools>=65.0", "wheel", "setuptools-scm[toml]>=8"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "prs_connector_core"
-version = "0.8.0"
+dynamic = ["version"]
 description = "Базовый модуль для коннекторов платформы Пересвет"
 authors = [
     {name = "ООО МПК", email = "info@mp-co.ru"},
@@ -37,6 +37,9 @@ Documentation = "https://mp-co-ru.github.io/prs-connector-core/"
 [tool.setuptools]
 include-package-data = true
 packages = ["prs_connector_core"]
+
+[tool.setuptools_scm]
+write_to = "prs_connector_core/_version.py"
 
 [tool.setuptools.package-data]
 "prs_connector_core" = ["py.typed"]

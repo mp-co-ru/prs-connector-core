@@ -8,7 +8,7 @@ import pytest
 import aiomqtt
 
 from prs_connector_core.config import TagAttributes, TagPrsJsonConfigStringFromPlatform
-from prs_connector_core.connector import BaseConnector, TagGroupReaderConnector, CN_Q_UNLINK_COTTECTOR_TO_SOURCE
+from prs_connector_core.connector import BaseConnector, TagGroupReaderConnector, CN_Q_UNLINK_CONNECTOR_TO_SOURCE
 
 
 class TestConnector(BaseConnector):
@@ -689,7 +689,7 @@ async def test_read_tags_disconnect_pushes_bad_quality_data_and_closes_source(tm
     assert queue_payloads[0] == {
         "data": [{
             "tagId": "tag-1",
-            "data": [[777, None, CN_Q_UNLINK_COTTECTOR_TO_SOURCE]],
+            "data": [[777, None, CN_Q_UNLINK_CONNECTOR_TO_SOURCE]],
         }]
     }
 

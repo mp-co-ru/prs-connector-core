@@ -11,7 +11,7 @@ from .connector import (
     BaseConnector,
     TagGroupReaderConnector,
     CN_Q_GOOD,
-    CN_Q_UNLINK_COTTECTOR_TO_SOURCE,
+    CN_Q_UNLINK_CONNECTOR_TO_SOURCE,
     CN_Q_SOURCE_ERROR,
     main
 )
@@ -38,6 +38,7 @@ from .times import (
     ts_to_local_str,
     now_int
 )
+from importlib.metadata import version as _pkg_version, PackageNotFoundError
 
 from typing_extensions import Self
 __all__ = [
@@ -59,9 +60,15 @@ __all__ = [
     'ts_to_local_str',
     'now_int',
     'CN_Q_GOOD',
-    'CN_Q_UNLINK_COTTECTOR_TO_SOURCE',
+    'CN_Q_UNLINK_CONNECTOR_TO_SOURCE',
     'CN_Q_SOURCE_ERROR',
     'main'
 ]
 
-__version__ = "0.8.0"
+try:
+    from ._version import version as __version__
+except Exception:
+    try:
+        __version__ = _pkg_version("prs_connector_core")
+    except PackageNotFoundError:
+        __version__ = "0.0.0.dev0"

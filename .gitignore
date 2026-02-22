@@ -173,5 +173,6 @@ cython_debug/
 .pypirc
 
 prs_connector_core/__pycache__
+prs_connector_core/_version.py
 tst_*
 coverage.xml

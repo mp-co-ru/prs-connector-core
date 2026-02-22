@@ -34,7 +34,7 @@ from .exceptions import (
 from .times import now_int
 
 CN_Q_GOOD : Final[int] = 100
-CN_Q_UNLINK_COTTECTOR_TO_SOURCE : Final[int] = 102
+CN_Q_UNLINK_CONNECTOR_TO_SOURCE : Final[int] = 102
 CN_Q_SOURCE_ERROR : Final[int] = 103
 
 class BaseConnector(ABC):
@@ -817,7 +817,7 @@ class TagGroupReaderConnector(BaseConnector):
                             for tag_id in self._tag_cache.keys():
                                 data["data"].append({
                                     "tagId": tag_id,
-                                    "data": [[ts, None, CN_Q_UNLINK_COTTECTOR_TO_SOURCE]]
+                                    "data": [[ts, None, CN_Q_UNLINK_CONNECTOR_TO_SOURCE]]
                                 })
                             if data["data"]:
                                 self._data_queue.put_nowait(data)

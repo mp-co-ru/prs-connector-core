@@ -16,6 +16,8 @@ jobs:
       # Шаг 1: Клонирование репозитория
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       # Шаг 2: Установка Python
       - name: Set up Python

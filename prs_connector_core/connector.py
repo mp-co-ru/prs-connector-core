@@ -62,7 +62,7 @@ class BaseConnector(ABC):
         # {
         #    "<tag_id>": {
         #       "JSONataExpr": Jsonata(),
-        #       "lastValue": [val, ts, q]
+        #       "lastValue": [ts, val, q]
         #    }
         # }
         self._tag_cache = {}
@@ -299,39 +299,45 @@ class BaseConnector(ABC):
                 value_type = self._config_from_platfrom.tags[tag_id].prsValueTypeCode
                 max_dev = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.maxDev
                 for data_value in tag["data"]:
-                    new_data_value = data_value
+                    new_data_value = list(data_value)
+                    if len(new_data_value) == 1:
+                        # В формате [x, y, q] при отсутствии метки времени source может вернуть только значение [y].
+                        # Добавляем текущий ts в начало, чтобы привести к [x, y].
+                        new_data_value.insert(0, cur_time)
                     new_data_quality = None if len(new_data_value) < 3 else new_data_value[2]
                     if jsonata_expr:
-                        new_data_value[0] = jsonata_expr.evaluate(new_data_value[0])
-                    if len(new_data_value) == 1:
-                        new_data_value.append(cur_time)
+                        new_data_value[1] = jsonata_expr.evaluate(new_data_value[1])
 
-                    if new_data_value[0] is not None:
+                    if new_data_value[1] is not None:
                         match value_type:
-                            case 0: new_data_value[0] = int(new_data_value[0])
-                            case 1: new_data_value[0] = float(new_data_value[0])
-                            case 2: new_data_value[0] = str(new_data_value[0])
+                            case 0: new_data_value[1] = int(new_data_value[1])
+                            case 1: new_data_value[1] = float(new_data_value[1])
+                            case 2: new_data_value[1] = str(new_data_value[1])
                             case 4:
-                                if isinstance(new_data_value[0], str):
+                                if isinstance(new_data_value[1], str):
                                     try:
-                                        new_data_value[0] = json.loads(new_data_value[0])
+                                        new_data_value[1] = json.loads(new_data_value[1])
                                     except Exception as ex:
-                                        self._logger.error(f"Тег '{tag_id}'. Ошибка конвертации значения '{new_data_value[0]}' к типу {value_type}: {ex}")
+                                        self._logger.error(f"Тег '{tag_id}'. Ошибка конвертации значения '{new_data_value[1]}' к типу {value_type}: {ex}")
                                         continue
                             case _ as code:
-                                self._logger.error(f"Тег '{tag_id}'. Ошибка конвертации значения '{new_data_value[0]}' к типу {value_type}")
+                                self._logger.error(f"Тег '{tag_id}'. Ошибка конвертации значения '{new_data_value[1]}' к типу {value_type}")
                                 continue
 
                     if ((last_value is None) or # первое значение после запуска коннектора
                         (last_value[2] != new_data_quality) or # изменение качества
                         new_data_quality in (None, 100) and
                         (max_dev == 0 or
-                        new_data_value[0] != last_value[0] and
-                        (new_data_value[0] is None and last_value[0] is not None or
-                        new_data_value[0] is not None and last_value[0] is None or
-                        value_type in [0, 1] and (max_dev <= abs(last_value[0] - new_data_value[0])) or
-                        value_type == 2 and last_value[0] != new_data_value[0] or
-                        value_type == 4 and not self._dicts_are_equal(last_value[0], new_data_value[0])))):
+                        new_data_value[1] != last_value[1] and
+                        (new_data_value[1] is None and last_value[1] is not None or
+                        new_data_value[1] is not None and last_value[1] is None or
+                        value_type in [0, 1] and (max_dev <= abs(last_value[1] - new_data_value[1])) or
+                        value_type == 2 and last_value[1] != new_data_value[1] or
+                        value_type == 4 and (
+                            not isinstance(last_value[1], dict) or
+                            not isinstance(new_data_value[1], dict) or
+                            not self._dicts_are_equal(last_value[1], new_data_value[1])
+                        )))):
 
                         new_tag_data["data"].append(new_data_value)
                         last_value = new_data_value
@@ -811,7 +817,7 @@ class TagGroupReaderConnector(BaseConnector):
                             for tag_id in self._tag_cache.keys():
                                 data["data"].append({
                                     "tagId": tag_id,
-                                    "data": [[None, ts, CN_Q_UNLINK_COTTECTOR_TO_SOURCE]]
+                                    "data": [[ts, None, CN_Q_UNLINK_COTTECTOR_TO_SOURCE]]
                                 })
                             if data["data"]:
                                 self._data_queue.put_nowait(data)

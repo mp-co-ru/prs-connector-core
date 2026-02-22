@@ -2,11 +2,12 @@ import json
 import asyncio
 from uuid import uuid4
 from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 import aiomqtt
 
-from prs_connector_core.config import TagAttributes
+from prs_connector_core.config import TagAttributes, TagPrsJsonConfigStringFromPlatform
 from prs_connector_core.connector import BaseConnector, TagGroupReaderConnector, CN_Q_UNLINK_COTTECTOR_TO_SOURCE
 
 
@@ -60,7 +61,7 @@ def _register_tag(
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=value_type,
-        prsJsonConfigString={"maxDev": max_dev},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(maxDev=max_dev),
     )
     conn._tag_cache[tag_id] = {"JSONataExpr": None, "lastValue": None}
 
@@ -165,7 +166,7 @@ async def test_create_tag_cache_skips_inactive_tag(tmp_path, monkeypatch):
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=False,
         prsValueTypeCode=1,
-        prsJsonConfigString={},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(),
     )
 
     created = await conn._create_tag_cache(tag_id)
@@ -180,7 +181,7 @@ async def test_create_tag_cache_with_jsonata(tmp_path, monkeypatch):
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"JSONata": "$sum([1,2])"},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(JSONata="$sum([1,2])"),
     )
 
     created = await conn._create_tag_cache(tag_id)
@@ -289,12 +290,12 @@ async def test_tags_add_or_changed_full_list_adds_and_removes_tags(tmp_path, mon
     conn._config_from_platfrom.tags[existing_tag] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(maxDev=0),
     )
     conn._config_from_platfrom.tags[removed_tag] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(maxDev=0),
     )
 
     removed = []
@@ -352,12 +353,12 @@ async def test_tags_deleted_removes_tags_and_saves(tmp_path, monkeypatch):
     conn._config_from_platfrom.tags[tag_1] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(maxDev=0),
     )
     conn._config_from_platfrom.tags[tag_2] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(maxDev=0),
     )
 
     removed_cache = []
@@ -424,11 +425,12 @@ class DummyMqttClient:
 @pytest.mark.asyncio
 async def test_push_data_publishes_when_connected_and_data_present(tmp_path, monkeypatch):
     conn = _make_connector(tmp_path, monkeypatch)
-    conn._mqtt_client = DummyMqttClient()
+    dummy_client = DummyMqttClient()
+    cast(Any, conn)._mqtt_client = dummy_client
     conn._mqtt_connected.set()
     conn._canceled = False
 
-    conn._process_tags_data = lambda mes: {"data": [{"tagId": "t", "data": [[1, 2, 100]]}]}
+    conn._process_tags_data = lambda data: {"data": [{"tagId": "t", "data": [[1, 2, 100]]}]}
     await conn._data_queue.put({"data": [{"tagId": "t", "data": [[1, 2, 100]]}]})
 
     task = asyncio.create_task(conn._push_data())
@@ -436,9 +438,9 @@ async def test_push_data_publishes_when_connected_and_data_present(tmp_path, mon
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
 
-    assert len(conn._mqtt_client.calls) == 1
-    assert conn._mqtt_client.calls[0]["topic"] == "prsTag/app_api_client/data_set/*"
-    assert conn._mqtt_client.calls[0]["retain"] is True
+    assert len(dummy_client.calls) == 1
+    assert dummy_client.calls[0]["topic"] == "prsTag/app_api_client/data_set/*"
+    assert dummy_client.calls[0]["retain"] is True
 
 
 @pytest.mark.asyncio
@@ -448,7 +450,7 @@ async def test_push_data_writes_to_buffer_when_disconnected(tmp_path, monkeypatc
     conn._canceled = False
     conn._buf_file_name = str(tmp_path / "backup_test.dat")
 
-    conn._process_tags_data = lambda mes: {"data": [{"tagId": "t", "data": [[1, 2, 100]]}]}
+    conn._process_tags_data = lambda data: {"data": [{"tagId": "t", "data": [[1, 2, 100]]}]}
     await conn._data_queue.put({"data": [{"tagId": "t", "data": [[1, 2, 100]]}]})
 
     task = asyncio.create_task(conn._push_data())
@@ -477,7 +479,7 @@ async def test_process_buffer_moves_lines_to_queue_with_processed_flag(tmp_path,
             pushed.append(js)
             conn._canceled = True
 
-    conn._data_queue = QueueStub()
+    cast(Any, conn)._data_queue = QueueStub()
 
     await conn._process_buffer()
 
@@ -557,7 +559,7 @@ async def test_handle_messages_dispatches_actions(tmp_path, monkeypatch):
             return SimpleNamespace(payload=payload)
 
     payloads = [json.dumps({"action": a, "data": {}}).encode("utf8") for a in actions]
-    conn._mqtt_client = SimpleNamespace(messages=FakeMessages(payloads))
+    cast(Any, conn)._mqtt_client = SimpleNamespace(messages=FakeMessages(payloads))
 
     await conn._handle_messages()
 
@@ -571,7 +573,7 @@ async def test_tag_group_create_cache_adds_tag_to_frequency_group(tmp_path, monk
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"frequency": 2.5, "maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(frequency=2.5, maxDev=0),
     )
 
     created = await conn._create_tag_cache(tag_id)
@@ -590,7 +592,7 @@ async def test_tag_group_remove_cache_removes_group_and_cancels_task(tmp_path, m
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"frequency": frequency, "maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(frequency=frequency, maxDev=0),
     )
     conn._tag_cache[tag_id] = {"lastValue": None, "JSONataExpr": None}
     conn._tag_groups[frequency]["tags"] = [tag_id]
@@ -667,7 +669,7 @@ async def test_read_tags_disconnect_pushes_bad_quality_data_and_closes_source(tm
         def put_nowait(self, item):
             queue_payloads.append(item)
 
-    conn._data_queue = QueueStub()
+    cast(Any, conn)._data_queue = QueueStub()
 
     async def fake_close_source():
         conn.close_source_calls += 1
@@ -807,13 +809,14 @@ async def test_run_handles_mqtt_error_and_retries(tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_get_full_configuration_dispatches_to_two_handlers(tmp_path, monkeypatch):
     conn = _make_connector(tmp_path, monkeypatch)
-    called = {"connector": None, "tags": None}
+    called_connector = []
+    called_tags = []
 
     async def fake_connector_cfg(mes):
-        called["connector"] = mes
+        called_connector.append(mes)
 
     async def fake_tags_cfg(mes, full_list=False):
-        called["tags"] = (mes, full_list)
+        called_tags.append((mes, full_list))
 
     monkeypatch.setattr(conn, "_get_connector_configuration_from_platform", fake_connector_cfg)
     monkeypatch.setattr(conn, "_tags_add_or_changed", fake_tags_cfg)
@@ -828,15 +831,15 @@ async def test_get_full_configuration_dispatches_to_two_handlers(tmp_path, monke
     }
     await conn._get_full_configuration_from_platform(payload)
 
-    assert called["connector"] == {
+    assert called_connector[0] == {
         "data": {
             "prsActive": False,
             "prsEntityTypeCode": 5,
             "prsJsonConfigString": {"source": {"x": 1}, "log": {}},
         }
     }
-    assert called["tags"][0] == {"data": {"tags": payload["data"]["tags"]}}
-    assert called["tags"][1] is True
+    assert called_tags[0][0] == {"data": {"tags": payload["data"]["tags"]}}
+    assert called_tags[0][1] is True
 
 
 @pytest.mark.asyncio
@@ -873,7 +876,7 @@ async def test_tags_add_or_changed_updates_changed_existing_tag(tmp_path, monkey
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(maxDev=0),
     )
     removed = []
     refreshed = {"value": 0}
@@ -964,7 +967,7 @@ async def test_handle_messages_mqtt_error_clears_connection_flag(tmp_path, monke
         async def __anext__(self):
             raise aiomqtt.MqttError("oops")
 
-    conn._mqtt_client = SimpleNamespace(messages=ErrorMessages())
+    cast(Any, conn)._mqtt_client = SimpleNamespace(messages=ErrorMessages())
 
     task = asyncio.create_task(conn._handle_messages())
     await asyncio.sleep(0.05)
@@ -988,7 +991,7 @@ async def test_handle_messages_generic_exception_branch(tmp_path, monkeypatch):
             conn._canceled = True
             raise ValueError("boom")
 
-    conn._mqtt_client = SimpleNamespace(messages=ErrorMessages())
+    cast(Any, conn)._mqtt_client = SimpleNamespace(messages=ErrorMessages())
     await conn._handle_messages()
     assert conn._canceled is True
 
@@ -1000,7 +1003,7 @@ async def test_create_tag_cache_returns_false_when_jsonata_init_fails(tmp_path, 
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"JSONata": "$bad("},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(JSONata="$bad("),
     )
 
     def bad_jsonata(_):
@@ -1032,7 +1035,7 @@ async def test_tag_group_remove_cache_logs_when_tag_not_in_group(tmp_path, monke
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString={"frequency": frequency, "maxDev": 0},
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(frequency=frequency, maxDev=0),
     )
     conn._tag_groups[frequency]["tags"] = []
     conn._tag_cache[tag_id] = {"lastValue": None, "JSONataExpr": None}

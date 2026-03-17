@@ -11,6 +11,12 @@
 
 ``_config_from_platfrom`` - полная конфигурация, полученная от платформы.
 
+``_mqtt_will_topic`` - топик Last Will: ``prsConnector/connection_lost/<connector_id>``.
+Используется при подключении к MQTT-брокеру, чтобы при нештатном отключении платформа
+записала в привязанные теги качество 100.
+
+``_mqtt_will_payload`` - тело Last Will: JSON ``{"id": "<connector_id>"}``.
+
 ``_tag_cache`` - кэш тегов вида:
 
     .. code-block:: python

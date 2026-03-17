@@ -556,7 +556,8 @@ async def test_handle_messages_dispatches_actions(tmp_path, monkeypatch):
                 raise StopAsyncIteration
             payload = self.payloads[self.idx]
             self.idx += 1
-            return SimpleNamespace(payload=payload)
+            # Топик должен начинаться с prs2conn, иначе коннектор отправит сообщение в _process_message
+            return SimpleNamespace(payload=payload, topic="prs2conn/" + conn._config_from_file.id)
 
     payloads = [json.dumps({"action": a, "data": {}}).encode("utf8") for a in actions]
     cast(Any, conn)._mqtt_client = SimpleNamespace(messages=FakeMessages(payloads))

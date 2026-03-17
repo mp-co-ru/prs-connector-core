@@ -425,7 +425,7 @@ class BaseConnector(ABC):
                         self._logger.info(f"Связь с платформой установлена.")
 
                         await client.subscribe(self._mqtt_topic_messages_from_platform)
-                        # даём возможность наследникам подписаться на что-то ещё
+                        # даём возможность наследникам подписаться на что-то ещё.
                         # необходимо, к примеру, для mqtt-коннектора
                         await self._subscribe_client()
                         self._mqtt_connected.set()
@@ -622,7 +622,7 @@ class BaseConnector(ABC):
         self._logger.info(f"Конфигурация сохранена.")
 
     async def _process_message(self, message) -> None :
-        # обработчик не стандартных сообщений.
+        # обработчик нестандартных сообщений.
         # для классов-наследников
         return
 

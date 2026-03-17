@@ -33,7 +33,7 @@ from .exceptions import (
 )
 from .times import now_int
 
-CN_Q_GOOD : Final[int] = 100
+CN_Q_GOOD : Final[int] = 0
 CN_Q_UNLINK_CONNECTOR_TO_SOURCE : Final[int] = 102
 CN_Q_SOURCE_ERROR : Final[int] = 103
 
@@ -86,6 +86,9 @@ class BaseConnector(ABC):
 
         # топик, в который платформа будет посылать сообщения для коннектора
         self._mqtt_topic_messages_from_platform = f"prs2conn/{self._config_from_file.id}"
+        # Last Will: при нештатном отключении брокер публикует в этот топик — платформа запишет в теги качество 100
+        self._mqtt_will_topic = f"prsConnector/connection_lost/{self._config_from_file.id}"
+        self._mqtt_will_payload = json.dumps({"id": self._config_from_file.id})
 
         self._mqtt_parsed_url = {
             "host": parsed_url.hostname,
@@ -361,6 +364,9 @@ class BaseConnector(ABC):
         """Обработчик для Unix"""
         self._canceled = True
 
+    async def _subscribe_client(self) -> None :
+        return
+
     async def run(self) -> None:
 
         self._loop = asyncio.get_running_loop()
@@ -396,6 +402,12 @@ class BaseConnector(ABC):
         try:
             while not self._canceled:
                 try:
+                    will = aiomqtt.Will(
+                        topic=self._mqtt_will_topic,
+                        payload=self._mqtt_will_payload,
+                        qos=0,
+                        retain=False,
+                    )
                     async with aiomqtt.Client(
                             identifier=self._config_from_file.id,
                             protocol=aiomqtt.ProtocolVersion.V5,
@@ -405,13 +417,17 @@ class BaseConnector(ABC):
                             password=self._mqtt_parsed_url["password"],
                             tls_params=self._mqtt_parsed_url["tls"],
                             timeout=180,
-                            keepalive=180
+                            keepalive=180,
+                            will=will,
                         ) as client:
                         self._mqtt_client = client
 
                         self._logger.info(f"Связь с платформой установлена.")
 
                         await client.subscribe(self._mqtt_topic_messages_from_platform)
+                        # даём возможность наследникам подписаться на что-то ещё
+                        # необходимо, к примеру, для mqtt-коннектора
+                        await self._subscribe_client()
                         self._mqtt_connected.set()
                         await asyncio.sleep(5)
                         payload = {
@@ -605,30 +621,40 @@ class BaseConnector(ABC):
         self._config_from_platfrom.save(self._config_from_file.id)
         self._logger.info(f"Конфигурация сохранена.")
 
+    async def _process_message(self, message) -> None :
+        # обработчик не стандартных сообщений.
+        # для классов-наследников
+        return
+
     async def _handle_messages(self):
         while not self._canceled:
             try:
                 await self._mqtt_connected.wait()
                 if self._mqtt_client:
                     async for message in self._mqtt_client.messages:
-                        json_str = message.payload.decode('utf8') # type: ignore
-                        message_data = json.loads(json_str)
 
-                        self._logger.info(f"Сообщение от платформы: {message_data['action']}.")
+                        topic = getattr(message, "topic", None) or ""
+                        if str(topic).startswith("prs2conn"):
+                            json_str = message.payload.decode('utf8') # type: ignore
+                            message_data = json.loads(json_str)
 
-                        match message_data["action"]:
-                            case "prsConnector.full_configuration":
-                                await self._get_full_configuration_from_platform(message_data)
-                            case "prsConnector.connector_configuration":
-                                await self._get_connector_configuration_from_platform(message_data)
-                            case "prsConnector.tags_configuration":
-                                await self._tags_add_or_changed(message_data)
-                            case "prsConnector.tags_deleted":
-                                await self._tags_deleted(message_data)
-                            case "prsConnector.deleted":
-                                await self._deleted(message_data)
-                            case "prsConnector.command":
-                                await self._command(message_data)
+                            self._logger.info(f"Сообщение от платформы: {message_data['action']}.")
+
+                            match message_data["action"]:
+                                case "prsConnector.full_configuration":
+                                    await self._get_full_configuration_from_platform(message_data)
+                                case "prsConnector.connector_configuration":
+                                    await self._get_connector_configuration_from_platform(message_data)
+                                case "prsConnector.tags_configuration":
+                                    await self._tags_add_or_changed(message_data)
+                                case "prsConnector.tags_deleted":
+                                    await self._tags_deleted(message_data)
+                                case "prsConnector.deleted":
+                                    await self._deleted(message_data)
+                                case "prsConnector.command":
+                                    await self._command(message_data)
+                        else:
+                            await self._process_message(message)
 
             except aiomqtt.MqttError as ex:
                 self._mqtt_connected.clear()

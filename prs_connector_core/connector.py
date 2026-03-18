@@ -445,6 +445,18 @@ class BaseConnector(ABC):
                         while self._mqtt_connected.is_set() and not self._canceled:
                             await asyncio.sleep(3)
 
+                        # При штатном отключении брокер не публикует LWT (отправляется DISCONNECT).
+                        # Публикуем в топик LWT вручную, чтобы платформа записала в теги качество 100.
+                        if self._canceled and self._mqtt_client:
+                            try:
+                                await client.publish(
+                                    self._mqtt_will_topic,
+                                    payload=self._mqtt_will_payload,
+                                    qos=0,
+                                )
+                            except Exception as ex:
+                                self._logger.warning("Не удалось отправить сообщение о штатном отключении: %s", ex)
+
                 except aiomqtt.MqttError as e:
                     self._logger.error(f"Разрыв связи с платформой: {e}.")
                     self._mqtt_connected.clear()

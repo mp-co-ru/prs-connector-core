@@ -329,7 +329,7 @@ class BaseConnector(ABC):
 
                     if ((last_value is None) or # первое значение после запуска коннектора
                         (last_value[2] != new_data_quality) or # изменение качества
-                        new_data_quality in (None, 100) and
+                        new_data_quality in (None, CN_Q_GOOD, 100) and
                         (max_dev == 0 or
                         new_data_value[1] != last_value[1] and
                         (new_data_value[1] is None and last_value[1] is not None or

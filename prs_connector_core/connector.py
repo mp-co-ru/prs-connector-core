@@ -897,8 +897,9 @@ def main(conn_cls):
         conf = sys.argv[1]
     try:
         conn = conn_cls(conf)
-    except:
-        exit()
+    except Exception as e:
+        logging.getLogger("prs_emergency").exception("Ошибка инициализации коннектора: %s", e)
+        sys.exit(1)
 
     if sys.platform.lower() == "win32" or os.name.lower() == "nt":
         freeze_support()

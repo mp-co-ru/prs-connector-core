@@ -995,6 +995,7 @@ async def test_handle_messages_generic_exception_branch(tmp_path, monkeypatch):
     cast(Any, conn)._mqtt_client = SimpleNamespace(messages=ErrorMessages())
     await conn._handle_messages()
     assert conn._canceled is True
+    assert not conn._mqtt_connected.is_set()
 
 
 @pytest.mark.asyncio

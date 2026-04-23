@@ -147,6 +147,19 @@ def test_process_tags_data_emits_on_quality_change(tmp_path, monkeypatch):
     assert result == {"data": [{"tagId": tag_id, "data": [[1001, 10.0, 103]]}]}
 
 
+def test_reset_tag_cache_last_sent_values_allows_resend_after_platform_restart(tmp_path, monkeypatch):
+    """После сброса кэша стабильное значение снова проходит дедупликацию (как «первое»)."""
+    conn = _make_connector(tmp_path, monkeypatch)
+    tag_id = str(uuid4())
+    _register_tag(conn, tag_id, value_type=0, max_dev=10)
+    conn._tag_cache[tag_id]["lastValue"] = [1, 549, 0]
+    payload = {"data": [{"tagId": tag_id, "data": [[2, 549, 0]]}]}
+    assert conn._process_tags_data(payload) == {"data": []}
+    conn._reset_tag_cache_last_sent_values()
+    result = conn._process_tags_data(payload)
+    assert result == {"data": [{"tagId": tag_id, "data": [[2, 549, 0]]}]}
+
+
 def test_process_tags_data_json_compares_dict_content_not_key_order(tmp_path, monkeypatch):
     conn = _make_connector(tmp_path, monkeypatch)
     tag_id = str(uuid4())
@@ -772,6 +785,79 @@ async def test_run_success_connect_flow(tmp_path, monkeypatch):
     assert fake_client.subscriptions == [conn._mqtt_topic_messages_from_platform]
     assert len(fake_client.publishes) == 1
     assert fake_client.publishes[0][0] == f"conn2prs/{conn._config_from_file.id}"
+
+
+@pytest.mark.asyncio
+async def test_run_retries_when_client_context_exit_raises_oserror(tmp_path, monkeypatch):
+    """aiomqtt при закрытии клиента может выбросить из __aexit__ не MqttError — цикл run() должен переподключаться."""
+    conn = _make_connector(tmp_path, monkeypatch)
+    conn._config_from_platfrom.prsActive = False
+
+    class FirstClientExplodesOnExit:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            raise OSError(111, "Connection refused")
+
+        async def subscribe(self, topic):
+            return None
+
+        async def publish(self, topic, payload, retain):
+            return None
+
+    class GoodClient:
+        def __init__(self):
+            self.subscriptions: list[str] = []
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def subscribe(self, topic):
+            self.subscriptions.append(topic)
+
+        async def publish(self, topic, payload, retain):
+            return None
+
+    instances: list[object] = []
+
+    def client_factory(**kwargs):
+        if len(instances) == 0:
+            c: object = FirstClientExplodesOnExit()
+        else:
+            c = GoodClient()
+        instances.append(c)
+        return c
+
+    shutdown_called = {"value": 0}
+
+    async def fake_shutdown():
+        shutdown_called["value"] += 1
+
+    inner_sleeps = {"n": 0}
+
+    async def fast_sleep(seconds):
+        if seconds == 3:
+            inner_sleeps["n"] += 1
+            if inner_sleeps["n"] == 1:
+                conn._mqtt_connected.clear()
+            elif inner_sleeps["n"] >= 2:
+                conn._canceled = True
+        return None
+
+    monkeypatch.setattr("prs_connector_core.connector.aiomqtt.Client", client_factory)
+    monkeypatch.setattr("prs_connector_core.connector.asyncio.sleep", fast_sleep)
+    monkeypatch.setattr("prs_connector_core.connector.signal.signal", lambda *_: None)
+    monkeypatch.setattr("prs_connector_core.connector.sys.platform", "win32")
+    monkeypatch.setattr(conn, "_shutdown", fake_shutdown)
+
+    await conn.run()
+
+    assert len(instances) >= 2
+    assert shutdown_called["value"] == 1
 
 
 @pytest.mark.asyncio

@@ -37,6 +37,11 @@ CN_Q_GOOD : Final[int] = 0
 CN_Q_UNLINK_CONNECTOR_TO_SOURCE : Final[int] = 102
 CN_Q_SOURCE_ERROR : Final[int] = 103
 
+# В aiomqtt параметр timeout ограничивает subscribe/publish и ожидание DISCONNECT в
+# __aexit__. При 180 с цикл run() может долго не доходить до новой попытки connect —
+# в логе один «Разрыв связи», чтение Modbus идёт, а MQTT снова не поднимается.
+MQTT_BROKER_OPERATION_TIMEOUT: Final[float] = 30.0
+
 class BaseConnector(ABC):
     """Базовый класс коннектора платформы Peresvet"""
 
@@ -423,6 +428,12 @@ class BaseConnector(ABC):
         try:
             while not self._canceled:
                 try:
+                    self._logger.info(
+                        "Подключение к брокеру MQTT платформы %s:%s (таймаут операций %s с)...",
+                        self._mqtt_parsed_url["host"],
+                        self._mqtt_parsed_url["port"],
+                        MQTT_BROKER_OPERATION_TIMEOUT,
+                    )
                     will = aiomqtt.Will(
                         topic=self._mqtt_will_topic,
                         payload=self._mqtt_will_payload,
@@ -437,7 +448,7 @@ class BaseConnector(ABC):
                             username=self._mqtt_parsed_url["user"],
                             password=self._mqtt_parsed_url["password"],
                             tls_params=self._mqtt_parsed_url["tls"],
-                            timeout=180,
+                            timeout=MQTT_BROKER_OPERATION_TIMEOUT,
                             keepalive=180,
                             will=will,
                         ) as client:
@@ -519,6 +530,10 @@ class BaseConnector(ABC):
             }
         }
         await self._tags_add_or_changed(mes=new_mes, full_list=True)
+        # Теги без изменений в конфиге оставляют lastValue в памяти. После перезапуска
+        # платформы могла уйти одна точка до готовности приёма; дальше max_dev отсекает
+        # те же значения — в платформе пусто. Синхронизируем с состоянием после full_configuration.
+        self._reset_tag_cache_last_sent_values()
 
     @classmethod
     def _hash_dict(cls, js: dict) -> bytes:

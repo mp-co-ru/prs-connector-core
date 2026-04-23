@@ -930,6 +930,41 @@ async def test_get_full_configuration_dispatches_to_two_handlers(tmp_path, monke
 
 
 @pytest.mark.asyncio
+async def test_full_configuration_resets_last_sent_tag_values(tmp_path, monkeypatch):
+    """После prsConnector.full_configuration сбрасываем lastValue, чтобы снова отправить текущие значения."""
+    conn = _make_connector(tmp_path, monkeypatch)
+    tag_id = str(uuid4())
+    _register_tag(conn, tag_id, value_type=0, max_dev=10)
+    conn._tag_cache[tag_id]["lastValue"] = [1, 99, 0]
+
+    async def noop_connector(mes):
+        return None
+
+    async def noop_tags(mes, full_list=False):
+        return None
+
+    monkeypatch.setattr(conn, "_get_connector_configuration_from_platform", noop_connector)
+    monkeypatch.setattr(conn, "_tags_add_or_changed", noop_tags)
+
+    mes = {
+        "data": {
+            "prsActive": True,
+            "prsEntityTypeCode": 1,
+            "prsJsonConfigString": {"source": {}, "log": {"fileName": "x.log"}},
+            "tags": {
+                tag_id: {
+                    "prsActive": True,
+                    "prsValueTypeCode": 0,
+                    "prsJsonConfigString": {"maxDev": 10},
+                }
+            },
+        }
+    }
+    await conn._get_full_configuration_from_platform(mes)
+    assert conn._tag_cache[tag_id]["lastValue"] is None
+
+
+@pytest.mark.asyncio
 async def test_get_connector_configuration_active_toggle_to_false(tmp_path, monkeypatch):
     conn = _make_connector(tmp_path, monkeypatch)
     conn._config_from_platfrom.prsActive = True

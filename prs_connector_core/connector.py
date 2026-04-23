@@ -205,6 +205,15 @@ class BaseConnector(ABC):
                 return
             except Exception as ex:
                 self._logger.error(f"Системная ошибка в цикле отправки данных в платформу: {ex}.")
+                # OSError и др. при обрыве сокета не всегда оборачиваются в MqttError — без сброса
+                # флага run() не выходит из ожидания и коннектор не переподключается к брокеру.
+                self._mqtt_connected.clear()
+                if new_mes["data"]:
+                    try:
+                        await write_to_buf(new_mes)
+                        self._logger.info("После ошибки отправки: сохраняем в буфер.")
+                    except Exception as buf_ex:
+                        self._logger.error(f"Не удалось записать буфер после ошибки отправки: {buf_ex}.")
 
     async def _process_buffer(self):
         # бесконечная функция обработки буфера
@@ -675,6 +684,7 @@ class BaseConnector(ABC):
                 return
             except Exception as ex:
                 self._logger.error(f"Системная ошибка в цикле обработки сообщений: {ex}.")
+                self._mqtt_connected.clear()
 
     async def _command(self, message_data):
         for line in message_data["data"]["command"]["lines"]:

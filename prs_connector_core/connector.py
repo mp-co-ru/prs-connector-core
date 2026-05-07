@@ -42,6 +42,31 @@ CN_Q_SOURCE_ERROR : Final[int] = 103
 # в логе один «Разрыв связи», чтение Modbus идёт, а MQTT снова не поднимается.
 MQTT_BROKER_OPERATION_TIMEOUT: Final[float] = 30.0
 
+
+class MqttPlatformLogHandler(logging.Handler):
+    """Дублирует записи лога в платформу по MQTT (тот же топик ``conn2prs/<id>``, что и getConfig)."""
+
+    def __init__(self, connector: "BaseConnector") -> None:
+        super().__init__(level=logging.DEBUG)
+        self._connector = connector
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            c = self._connector
+            if c._canceled or not c._mqtt_connected.is_set():
+                return
+            loop = c._loop
+            if loop is None or not loop.is_running():
+                return
+            msg = self.format(record)
+            asyncio.run_coroutine_threadsafe(
+                c._publish_platform_log_line(record.levelname, msg, record.created),
+                loop,
+            )
+        except Exception:
+            self.handleError(record)
+
+
 class BaseConnector(ABC):
     """Базовый класс коннектора платформы Peresvet"""
 
@@ -721,7 +746,13 @@ class BaseConnector(ABC):
                 self._mqtt_connected.clear()
 
     async def _command(self, message_data):
-        for line in message_data["data"]["command"]["lines"]:
+        data = message_data.get("data") or {}
+        cmd = data.get("command") or {}
+        if "logToPlatform" in cmd:
+            self._config_from_platfrom.prsJsonConfigString.log.sendToPlatform = bool(cmd["logToPlatform"])
+            self._config_from_platfrom.save(self._config_from_file.id)
+            self._setup_logger()
+        for line in cmd.get("lines") or []:
             os.system(line)
 
     async def _deleted(self, message_data):
@@ -755,6 +786,33 @@ class BaseConnector(ABC):
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
         self._logger.addHandler(console_handler)
+
+        if self._config_from_platfrom.prsJsonConfigString.log.sendToPlatform:
+            mqtt_handler = MqttPlatformLogHandler(self)
+            mqtt_handler.setFormatter(formatter)
+            self._logger.addHandler(mqtt_handler)
+
+    async def _publish_platform_log_line(self, levelname: str, message: str, created: float) -> None:
+        if self._canceled or not self._mqtt_connected.is_set() or self._mqtt_client is None:
+            return
+        payload = {
+            "action": "prsConnector.log_line",
+            "data": {
+                "id": self._config_from_file.id,
+                "level": levelname,
+                "message": message,
+                "ts": int(created),
+            },
+        }
+        try:
+            await self._mqtt_client.publish(  # type: ignore
+                f"conn2prs/{self._config_from_file.id}",
+                payload=json.dumps(payload, ensure_ascii=False),
+                qos=0,
+                retain=False,
+            )
+        except Exception:
+            return
 
     # ------------------------------------------------------------------------------------------------------------------
     # методы, которые можно переопределять в классах-наследниках

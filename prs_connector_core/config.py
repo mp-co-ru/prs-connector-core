@@ -29,6 +29,8 @@ class LogConfig(BaseModel):
     fileName: str = "logs/prs_connector.log"
     maxBytes: int = 10 * 1024 * 1024  # 10MB
     backupCount: int = 10
+    # дублируется в platform_config_*; переключатель в конфигураторе шлёт command.logToPlatform по MQTT
+    sendToPlatform: bool = False
 
 class ConnectorPrsJsonConfigStringFromPlatform(BaseModel):
     source: dict = {}

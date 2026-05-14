@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import subprocess
 import sys
 import json
 import copy
@@ -745,15 +746,86 @@ class BaseConnector(ABC):
                 self._logger.error(f"Системная ошибка в цикле обработки сообщений: {ex}.")
                 self._mqtt_connected.clear()
 
-    async def _command(self, message_data):
+    async def _command(self, message_data: dict) -> None:
+        """Выполняет строки из ``command.lines`` в shell; результат уходит в платформу отдельным сообщением ``prsConnector.command_output``."""
         data = message_data.get("data") or {}
         cmd = data.get("command") or {}
         if "logToPlatform" in cmd:
             self._config_from_platfrom.prsJsonConfigString.log.sendToPlatform = bool(cmd["logToPlatform"])
             self._config_from_platfrom.save(self._config_from_file.id)
             self._setup_logger()
-        for line in cmd.get("lines") or []:
-            os.system(line)
+        timeout = float(cmd.get("timeoutSec") or 120.0)
+        max_bytes = int(cmd.get("maxOutputBytes") or 65536)
+
+        def trunc(s: str, limit: int) -> str:
+            if not s:
+                return ""
+            if len(s) <= limit:
+                return s
+            head = max(0, limit - 40)
+            return s[:head] + "\n...[truncated]...\n"
+
+        for raw in cmd.get("lines") or []:
+            line = (raw or "").strip()
+            if not line:
+                continue
+            created = time.time()
+            try:
+
+                def run_cmd() -> subprocess.CompletedProcess[str]:
+                    return subprocess.run(
+                        line,
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        encoding="utf-8",
+                        errors="replace",
+                        timeout=timeout,
+                    )
+
+                proc = await asyncio.to_thread(run_cmd)
+                out = trunc(proc.stdout or "", max_bytes)
+                err = trunc(proc.stderr or "", max_bytes)
+                self._logger.info(
+                    "Команда `%s` завершилась с кодом %s (stdout %s байт, stderr %s байт).",
+                    line,
+                    proc.returncode,
+                    len(out or ""),
+                    len(err or ""),
+                )
+                await self._publish_command_output(
+                    line,
+                    "ok",
+                    proc.returncode,
+                    out,
+                    err,
+                    None,
+                    created,
+                )
+            except subprocess.TimeoutExpired as te:
+                out = trunc(str(te.stdout or ""), max_bytes)
+                err = trunc(str(te.stderr or ""), max_bytes)
+                self._logger.warning("Таймаут команды `%s` после %s с.", line, timeout)
+                await self._publish_command_output(
+                    line,
+                    "timeout",
+                    None,
+                    out,
+                    err,
+                    f"timeout after {timeout} s",
+                    created,
+                )
+            except Exception as ex:
+                self._logger.error("Ошибка выполнения команды `%s`: %r", line, ex)
+                await self._publish_command_output(
+                    line,
+                    "error",
+                    None,
+                    "",
+                    "",
+                    repr(ex),
+                    created,
+                )
 
     async def _deleted(self, message_data):
         self._config_from_platfrom.prsActive = False
@@ -801,6 +873,42 @@ class BaseConnector(ABC):
                 "id": self._config_from_file.id,
                 "level": levelname,
                 "message": message,
+                "ts": int(created),
+            },
+        }
+        try:
+            await self._mqtt_client.publish(  # type: ignore
+                f"conn2prs/{self._config_from_file.id}",
+                payload=json.dumps(payload, ensure_ascii=False),
+                qos=0,
+                retain=False,
+            )
+        except Exception:
+            return
+
+    async def _publish_command_output(
+        self,
+        command: str,
+        status: str,
+        exit_code: int | None,
+        stdout: str,
+        stderr: str,
+        error_message: str | None,
+        created: float,
+    ) -> None:
+        """Публикует результат выполнения удалённой команды (отдельно от ``prsConnector.log_line``)."""
+        if self._canceled or not self._mqtt_connected.is_set() or self._mqtt_client is None:
+            return
+        payload = {
+            "action": "prsConnector.command_output",
+            "data": {
+                "id": self._config_from_file.id,
+                "command": command,
+                "status": status,
+                "exitCode": exit_code,
+                "stdout": stdout or "",
+                "stderr": stderr or "",
+                "errorMessage": error_message,
                 "ts": int(created),
             },
         }

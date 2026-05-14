@@ -1,5 +1,6 @@
 import json
 import asyncio
+import subprocess
 from uuid import uuid4
 from types import SimpleNamespace
 from typing import Any, cast
@@ -397,11 +398,261 @@ async def test_tags_deleted_removes_tags_and_saves(tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_command_executes_all_lines(tmp_path, monkeypatch):
     conn = _make_connector(tmp_path, monkeypatch)
-    executed = []
-    monkeypatch.setattr("prs_connector_core.connector.os.system", lambda cmd: executed.append(cmd) or 0)
+    published: list[dict[str, object]] = []
+    runs: list[dict[str, object]] = []
 
-    await conn._command({"data": {"command": {"lines": ["echo 1", "echo 2"]}}})
-    assert executed == ["echo 1", "echo 2"]
+    def fake_run(command, **kwargs):
+        runs.append({"command": command, **kwargs})
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=7,
+            stdout=f"stdout for {command}",
+            stderr=f"stderr for {command}",
+        )
+
+    async def cap_publish(
+        command: str,
+        status: str,
+        exit_code: int | None,
+        stdout: str,
+        stderr: str,
+        error_message: str | None,
+        created: float,
+    ):
+        published.append(
+            {
+                "command": command,
+                "status": status,
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "error_message": error_message,
+            }
+        )
+
+    monkeypatch.setattr("prs_connector_core.connector.subprocess.run", fake_run)
+    monkeypatch.setattr(conn, "_publish_command_output", cap_publish)
+
+    await conn._command({
+        "data": {
+            "command": {
+                "lines": [" echo 1 ", "echo 2", "  ", ""],
+                "timeoutSec": 3,
+            }
+        }
+    })
+
+    assert [r["command"] for r in runs] == ["echo 1", "echo 2"]
+    assert all(r["shell"] is True for r in runs)
+    assert all(r["capture_output"] is True for r in runs)
+    assert all(r["text"] is True for r in runs)
+    assert all(r["encoding"] == "utf-8" for r in runs)
+    assert all(r["errors"] == "replace" for r in runs)
+    assert all(r["timeout"] == 3.0 for r in runs)
+    assert len(published) == 2
+    assert all(p["status"] == "ok" for p in published)
+    assert published[0]["command"] == "echo 1"
+    assert published[0]["exit_code"] == 7
+    assert published[0]["stdout"] == "stdout for echo 1"
+    assert published[0]["stderr"] == "stderr for echo 1"
+    assert published[0]["error_message"] is None
+    assert published[1]["command"] == "echo 2"
+    assert published[1]["exit_code"] == 7
+
+
+@pytest.mark.asyncio
+async def test_command_truncates_large_output_before_publish(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    published: list[dict[str, object]] = []
+
+    def fake_run(command, **kwargs):
+        return subprocess.CompletedProcess(
+            args=command,
+            returncode=0,
+            stdout="0123456789abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz",
+            stderr="stderr is longer than limit",
+        )
+
+    async def cap_publish(
+        command: str,
+        status: str,
+        exit_code: int | None,
+        stdout: str,
+        stderr: str,
+        error_message: str | None,
+        created: float,
+    ):
+        published.append(
+            {
+                "command": command,
+                "status": status,
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "error_message": error_message,
+            }
+        )
+
+    monkeypatch.setattr("prs_connector_core.connector.subprocess.run", fake_run)
+    monkeypatch.setattr(conn, "_publish_command_output", cap_publish)
+
+    await conn._command({"data": {"command": {"lines": ["big-output"], "maxOutputBytes": 50}}})
+
+    assert published == [
+        {
+            "command": "big-output",
+            "status": "ok",
+            "exit_code": 0,
+            "stdout": "0123456789\n...[truncated]...\n",
+            "stderr": "stderr is longer than limit",
+            "error_message": None,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_command_publishes_timeout_result(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    published: list[dict[str, object]] = []
+
+    def fake_run(command, **kwargs):
+        raise subprocess.TimeoutExpired(
+            cmd=command,
+            timeout=kwargs["timeout"],
+            output="partial stdout",
+            stderr="partial stderr",
+        )
+
+    async def cap_publish(
+        command: str,
+        status: str,
+        exit_code: int | None,
+        stdout: str,
+        stderr: str,
+        error_message: str | None,
+        created: float,
+    ):
+        published.append(
+            {
+                "command": command,
+                "status": status,
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "error_message": error_message,
+            }
+        )
+
+    monkeypatch.setattr("prs_connector_core.connector.subprocess.run", fake_run)
+    monkeypatch.setattr(conn, "_publish_command_output", cap_publish)
+
+    await conn._command({"data": {"command": {"lines": ["sleep 10"], "timeoutSec": 0.5}}})
+
+    assert published == [
+        {
+            "command": "sleep 10",
+            "status": "timeout",
+            "exit_code": None,
+            "stdout": "partial stdout",
+            "stderr": "partial stderr",
+            "error_message": "timeout after 0.5 s",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_command_publishes_error_result(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    published: list[dict[str, object]] = []
+
+    def fake_run(command, **kwargs):
+        raise RuntimeError("boom")
+
+    async def cap_publish(
+        command: str,
+        status: str,
+        exit_code: int | None,
+        stdout: str,
+        stderr: str,
+        error_message: str | None,
+        created: float,
+    ):
+        published.append(
+            {
+                "command": command,
+                "status": status,
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "error_message": error_message,
+            }
+        )
+
+    monkeypatch.setattr("prs_connector_core.connector.subprocess.run", fake_run)
+    monkeypatch.setattr(conn, "_publish_command_output", cap_publish)
+
+    await conn._command({"data": {"command": {"lines": ["explode"]}}})
+
+    assert published == [
+        {
+            "command": "explode",
+            "status": "error",
+            "exit_code": None,
+            "stdout": "",
+            "stderr": "",
+            "error_message": "RuntimeError('boom')",
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_publish_command_output_sends_mqtt_payload(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+
+    class FakeMqttClient:
+        def __init__(self):
+            self.publishes: list[dict[str, object]] = []
+
+        async def publish(self, topic, **kwargs):
+            self.publishes.append({"topic": topic, **kwargs})
+
+    fake_client = FakeMqttClient()
+    cast(Any, conn)._mqtt_client = fake_client
+    conn._mqtt_connected.set()
+
+    await conn._publish_command_output(
+        command="ls /dev",
+        status="ok",
+        exit_code=0,
+        stdout="tty\nnull\n",
+        stderr="",
+        error_message=None,
+        created=123.45,
+    )
+
+    assert fake_client.publishes == [
+        {
+            "topic": f"conn2prs/{conn._config_from_file.id}",
+            "payload": json.dumps(
+                {
+                    "action": "prsConnector.command_output",
+                    "data": {
+                        "id": conn._config_from_file.id,
+                        "command": "ls /dev",
+                        "status": "ok",
+                        "exitCode": 0,
+                        "stdout": "tty\nnull\n",
+                        "stderr": "",
+                        "errorMessage": None,
+                        "ts": 123,
+                    },
+                },
+                ensure_ascii=False,
+            ),
+            "qos": 0,
+            "retain": False,
+        }
+    ]
 
 
 @pytest.mark.asyncio

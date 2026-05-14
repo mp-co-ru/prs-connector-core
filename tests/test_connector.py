@@ -397,11 +397,38 @@ async def test_tags_deleted_removes_tags_and_saves(tmp_path, monkeypatch):
 @pytest.mark.asyncio
 async def test_command_executes_all_lines(tmp_path, monkeypatch):
     conn = _make_connector(tmp_path, monkeypatch)
-    executed = []
-    monkeypatch.setattr("prs_connector_core.connector.os.system", lambda cmd: executed.append(cmd) or 0)
+    published: list[dict[str, object]] = []
 
-    await conn._command({"data": {"command": {"lines": ["echo 1", "echo 2"]}}})
-    assert executed == ["echo 1", "echo 2"]
+    async def cap_publish(
+        command: str,
+        status: str,
+        exit_code: int | None,
+        stdout: str,
+        stderr: str,
+        error_message: str | None,
+        created: float,
+    ):
+        published.append(
+            {
+                "command": command,
+                "status": status,
+                "exit_code": exit_code,
+                "stdout": stdout,
+                "stderr": stderr,
+                "error_message": error_message,
+            }
+        )
+
+    monkeypatch.setattr(conn, "_publish_command_output", cap_publish)
+
+    await conn._command({"data": {"command": {"lines": ["echo 1", "echo 2", "  ", ""]}}})
+
+    assert len(published) == 2
+    assert all(p["status"] == "ok" for p in published)
+    assert published[0]["command"] == "echo 1"
+    assert published[0]["exit_code"] == 0
+    assert published[1]["command"] == "echo 2"
+    assert published[1]["exit_code"] == 0
 
 
 @pytest.mark.asyncio

@@ -58,6 +58,25 @@ $ pytest
 $ python -m build
 ```
 
+### Запуск нескольких экземпляров коннектора
+
+Проекты коннекторов, использующие `prs_connector_core.main()`, могут запускать
+несколько экземпляров на одной машине. Каждый экземпляр должен получать свой
+JSON-файл конфигурации с уникальным `id`:
+
+```bash
+python connector.py --config /etc/prs-connectors/modbus-line-1.json
+PRS_CONNECTOR_CONFIG=/etc/prs-connectors/modbus-line-2.json python connector.py
+```
+
+Для постоянного запуска нескольких экземпляров добавлены шаблоны:
+
+- `deployment/systemd/prs-connector@.service.example`;
+- `deployment/docker/compose.example.yml`;
+- `deployment/docker/Dockerfile.example`.
+
+Подробная процедура описана в `docs/source/multi_instance_launch.rst`.
+
 ### Версионирование
 
 Версия пакета **не хранится в коде вручную**, а вычисляется при сборке из **имени git-тега** с помощью [setuptools-scm](https://github.com/pypa/setuptools_scm).

@@ -21,6 +21,7 @@ prs-connector-core
    Описание<description>
    Регистрация коннектора в платформе<registration>
    Логика работы коннектора<work_logic>
+   Запуск нескольких экземпляров коннектора<multi_instance_launch>
    Формат сообщений<message_format>
    Разработка нового коннектора<create_new_connector>
    Класс BaseConnector<baseconnector_class>

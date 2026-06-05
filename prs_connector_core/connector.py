@@ -1,4 +1,5 @@
 from __future__ import annotations
+import argparse
 import os
 import subprocess
 import sys
@@ -15,6 +16,7 @@ import aiomqtt
 import aiofiles
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from urllib.parse import urlparse
 from collections import defaultdict
@@ -42,6 +44,7 @@ CN_Q_SOURCE_ERROR : Final[int] = 103
 # __aexit__. При 180 с цикл run() может долго не доходить до новой попытки connect —
 # в логе один «Разрыв связи», чтение Modbus идёт, а MQTT снова не поднимается.
 MQTT_BROKER_OPERATION_TIMEOUT: Final[float] = 30.0
+CONNECTOR_CONFIG_ENV: Final[str] = "PRS_CONNECTOR_CONFIG"
 
 
 class MqttPlatformLogHandler(logging.Handler):
@@ -1113,10 +1116,36 @@ class TagGroupReaderConnector(BaseConnector):
         """Абстрактный метод закрытия соединения с источником"""
         raise NotImplementedError()
 
+
+def resolve_config_file(
+    argv: Sequence[str] | None = None,
+    environ: Mapping[str, str] | None = None,
+) -> str:
+    """Возвращает путь к конфигурации из CLI, окружения или значения по умолчанию."""
+    parser = argparse.ArgumentParser(
+        description="Запуск коннектора Пересвет.",
+    )
+    parser.add_argument(
+        "config_file",
+        nargs="?",
+        help="Путь к JSON-файлу конфигурации. Сохранено для обратной совместимости.",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        dest="config_option",
+        help=f"Путь к JSON-файлу конфигурации. Имеет приоритет над {CONNECTOR_CONFIG_ENV}.",
+    )
+    args = parser.parse_args(sys.argv[1:] if argv is None else list(argv))
+    if args.config_file and args.config_option:
+        parser.error("укажите путь к конфигурации либо позиционным аргументом, либо через --config")
+
+    env = os.environ if environ is None else environ
+    return args.config_option or args.config_file or env.get(CONNECTOR_CONFIG_ENV) or "config.json"
+
+
 def main(conn_cls):
-    conf = 'config.json'
-    if len(sys.argv) == 2:
-        conf = sys.argv[1]
+    conf = resolve_config_file()
     try:
         conn = conn_cls(conf)
     except Exception as e:

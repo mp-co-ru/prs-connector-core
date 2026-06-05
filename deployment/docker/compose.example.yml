@@ -1,0 +1,24 @@
+x-prs-connector: &prs-connector
+  build:
+    context: .
+    dockerfile: deployment/docker/Dockerfile.example
+  image: my-prs-connector:latest
+  restart: unless-stopped
+  working_dir: /state
+
+services:
+  connector-modbus-line-1:
+    <<: *prs-connector
+    environment:
+      PRS_CONNECTOR_CONFIG: /configs/modbus-line-1.json
+    volumes:
+      - ./configs:/configs:ro
+      - ./state/modbus-line-1:/state
+
+  connector-modbus-line-2:
+    <<: *prs-connector
+    environment:
+      PRS_CONNECTOR_CONFIG: /configs/modbus-line-2.json
+    volumes:
+      - ./configs:/configs:ro
+      - ./state/modbus-line-2:/state

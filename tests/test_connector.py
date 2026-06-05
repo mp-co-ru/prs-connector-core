@@ -9,7 +9,13 @@ import pytest
 import aiomqtt
 
 from prs_connector_core.config import TagAttributes, TagPrsJsonConfigStringFromPlatform
-from prs_connector_core.connector import BaseConnector, TagGroupReaderConnector, CN_Q_UNLINK_CONNECTOR_TO_SOURCE
+from prs_connector_core.connector import (
+    BaseConnector,
+    CONNECTOR_CONFIG_ENV,
+    TagGroupReaderConnector,
+    CN_Q_UNLINK_CONNECTOR_TO_SOURCE,
+    resolve_config_file,
+)
 
 
 class TestConnector(BaseConnector):
@@ -41,6 +47,34 @@ class DummyJsonata:
 
     def evaluate(self, _):
         return self._result
+
+
+def test_resolve_config_file_default():
+    assert resolve_config_file(argv=[], environ={}) == "config.json"
+
+
+def test_resolve_config_file_from_positional_argument():
+    assert resolve_config_file(argv=["configs/first.json"], environ={}) == "configs/first.json"
+
+
+def test_resolve_config_file_from_config_option():
+    assert resolve_config_file(argv=["--config", "configs/second.json"], environ={}) == "configs/second.json"
+
+
+def test_resolve_config_file_from_environment():
+    assert resolve_config_file(argv=[], environ={CONNECTOR_CONFIG_ENV: "configs/env.json"}) == "configs/env.json"
+
+
+def test_resolve_config_file_cli_has_priority_over_environment():
+    assert (
+        resolve_config_file(argv=["--config", "configs/cli.json"], environ={CONNECTOR_CONFIG_ENV: "configs/env.json"})
+        == "configs/cli.json"
+    )
+
+
+def test_resolve_config_file_rejects_positional_and_option_together():
+    with pytest.raises(SystemExit):
+        resolve_config_file(argv=["configs/first.json", "--config", "configs/second.json"], environ={})
 
 
 def _make_connector(tmp_path, monkeypatch) -> TestConnector:

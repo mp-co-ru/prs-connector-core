@@ -1,0 +1,20 @@
+[Unit]
+Description=Peresvet connector instance %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=CONNECTOR_PYTHON=/opt/prs-connector/.venv/bin/python
+Environment=CONNECTOR_ENTRYPOINT=/opt/prs-connector/connector.py
+Environment=CONNECTOR_CONFIG=/etc/prs-connectors/%i.json
+Environment=PRS_CONNECTOR_CONFIG=/etc/prs-connectors/%i.json
+EnvironmentFile=-/etc/prs-connectors/%i.env
+WorkingDirectory=/var/lib/prs-connectors/%i
+ExecStartPre=/usr/bin/mkdir -p /var/lib/prs-connectors/%i
+ExecStart=/bin/sh -c 'exec "$CONNECTOR_PYTHON" "$CONNECTOR_ENTRYPOINT" --config "$CONNECTOR_CONFIG"'
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

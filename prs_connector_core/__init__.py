@@ -13,6 +13,8 @@ from .connector import (
     CN_Q_GOOD,
     CN_Q_UNLINK_CONNECTOR_TO_SOURCE,
     CN_Q_SOURCE_ERROR,
+    CONNECTOR_CONFIG_ENV,
+    resolve_config_file,
     main
 )
 
@@ -62,6 +64,8 @@ __all__ = [
     'CN_Q_GOOD',
     'CN_Q_UNLINK_CONNECTOR_TO_SOURCE',
     'CN_Q_SOURCE_ERROR',
+    'CONNECTOR_CONFIG_ENV',
+    'resolve_config_file',
     'main'
 ]
 

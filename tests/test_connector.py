@@ -229,7 +229,7 @@ async def test_create_tag_cache_with_jsonata(tmp_path, monkeypatch):
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(JSONata="$sum([1,2])"),
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(source={"JSONata": "$sum([1,2])"}),
     )
 
     created = await conn._create_tag_cache(tag_id)
@@ -1411,7 +1411,7 @@ async def test_create_tag_cache_returns_false_when_jsonata_init_fails(tmp_path, 
     conn._config_from_platfrom.tags[tag_id] = TagAttributes(
         prsActive=True,
         prsValueTypeCode=1,
-        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(JSONata="$bad("),
+        prsJsonConfigString=TagPrsJsonConfigStringFromPlatform(source={"JSONata": "$bad("}),
     )
 
     def bad_jsonata(_):

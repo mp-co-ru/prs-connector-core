@@ -25,9 +25,11 @@ Content-Type: application/json
             "tagId":"<tag_id>",
             "attributes": {
                 "prsJsonConfigString": {
-                    "source": {},
+                    "source": {
+                        "JSONata": "<some jsonata expression>"
+                    },
                     "maxDev": 0.5,
-                    "JSONata": "<some jsonata expression>"
+                    "frequency": 5
                 }
             }
         }

@@ -11,9 +11,9 @@
 .. admonition:: Требование к конфигурации привязанного к коннектору тега
    :class: dropdown
 
-    Коннектор вводит дополнительное правило: атрибут ``source`` в конфигурации, хранимой в
-    ``prsJsonConfigString`` привязанного тега, должен содержать ключ ``frequency``, значение которого - частота
-    чтения тега из источника в секундах. Тип значения - вещественное.
+    Коннектор вводит дополнительное правило: конфигурация, хранимая в ``prsJsonConfigString``
+    привязанного тега, должна содержать ключ ``frequency``, значение которого - частота чтения
+    тега из источника в секундах. Тип значения - вещественное.
 
     В случае, если ключ ``frequency`` отсутствует, то принимается значение по умолчанию в пять
     секунд.
@@ -91,7 +91,7 @@
 .. code-block:: python
 
     async def _remove_tag_cache(self, tag_id: str):
-        frequency = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.source.get("frequency", 5)
+        frequency = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.frequency
 
         tag_group = self._tag_groups[frequency]
         """

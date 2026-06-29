@@ -943,7 +943,7 @@ class BaseConnector(ABC):
         }
         expr = None
         try:
-            expr = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.JSONata
+            expr = self._config_from_platfrom.tags[tag_id].prsJsonConfigString.source.get("JSONata")
             if expr:
                 self._tag_cache[tag_id]["JSONataExpr"] = Jsonata(expr)
 
@@ -970,7 +970,7 @@ class BaseConnector(ABC):
 class TagGroupReaderConnector(BaseConnector):
     """Класс коннектора, который читает данные из источника сам (не по подписке на события),
     при этом у каждого тега может быть своя частота чтения.
-    Соответственно, у каждого тега в атрибуте prsJsonConfigString["source"] должен быть ключ frequency, тип - float,
+    Соответственно, у каждого тега в атрибуте prsJsonConfigString должен быть ключ frequency, тип - float,
     значение - частота чтения в секундах. Если указанного атрибута нет, значение по умолчанию принимается 5 сек.
 
     Коннектор формирует дополнительный кэш в атрибуте _frequency_groups:

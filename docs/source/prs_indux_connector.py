@@ -18,11 +18,12 @@ class InduXConnector(BaseConnector):
     async def _read_tags(self):
 
         async def get_data():
-            # Для упрощения предположим, что коннектор читает все теги из источника
-            # с одной частотой.
-            # В противном случае придётся разбивать теги по группам в зависимости от частоты
-            # чтения и запускать для каждой группы свою задачу чтения данных из источника.
-            interval = self._config_from_platfrom.prsJsonConfigString.source["frequency"]
+            # Для упрощения предположим, что коннектор читает все теги одним циклом
+            # с минимальной частотой, указанной в конфигурации привязанных тегов.
+            interval = min(
+                tag.prsJsonConfigString.frequency or 5
+                for tag in self._config_from_platfrom.tags.values()
+            )
             while True:
 
                 # Зафиксируем время начала выполнения чтения.

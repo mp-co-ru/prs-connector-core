@@ -39,7 +39,6 @@ class ConnectorPrsJsonConfigStringFromPlatform(BaseModel):
 class TagPrsJsonConfigStringFromPlatform(BaseModel):
     source: dict = {}
     maxDev: float = 0
-    JSONata: str | None = None
     frequency: float | None = 5
 
 class ConnectorConfig(BaseModel):

@@ -260,9 +260,11 @@ class BaseConnector(ABC):
                     await asyncio.sleep(2)
                     continue
 
+                buffer_has_data = False
                 async with self._buf_file_lock:
                         stat = await aiofiles.os.stat(self._buf_file_name)
                         if stat.st_size > 0:
+                            buffer_has_data = True
                             # если размер буфера > 0
                             self._logger.info("Обработка буфера данных.")
                             async with aiofiles.open(self._tmp_buf_file_name, mode="+a") as tmp_file:
@@ -291,12 +293,15 @@ class BaseConnector(ABC):
                                                     await tmp_file.write(line)
                             await aiofiles.os.replace(self._tmp_buf_file_name, self._buf_file_name)
 
+                if not buffer_has_data:
+                    await asyncio.sleep(2)
+
             except asyncio.CancelledError:
                 if await aiofiles.os.path.exists(self._tmp_buf_file_name):
                     await aiofiles.os.replace(self._tmp_buf_file_name, self._buf_file_name)
             except Exception as ex:
                 self._logger.exception(f"Системная ошибка в цикле обработки буфера: {ex}.")
-                #time.sleep(2)
+                await asyncio.sleep(2)
 
     def _process_tags_data(self, data: dict) -> dict:
         """Метод обрабатывает "сырые" данные.

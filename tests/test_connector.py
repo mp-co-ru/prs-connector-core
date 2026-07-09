@@ -1502,6 +1502,28 @@ async def test_read_tags_generic_exception_branch(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_process_buffer_sleeps_when_buffer_empty(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    conn._canceled = False
+    conn._mqtt_connected.set()
+    conn._buf_file_name = str(tmp_path / "backup_test.dat")
+    conn._tmp_buf_file_name = str(tmp_path / "backup_test.tmp")
+    (tmp_path / "backup_test.dat").write_text("")
+
+    sleep_calls = []
+
+    async def track_sleep(seconds):
+        sleep_calls.append(seconds)
+        conn._canceled = True
+
+    monkeypatch.setattr("prs_connector_core.connector.asyncio.sleep", track_sleep)
+
+    await conn._process_buffer()
+
+    assert sleep_calls == [2]
+
+
+@pytest.mark.asyncio
 async def test_process_buffer_exception_branch_exits_when_canceled(tmp_path, monkeypatch):
     conn = _make_connector(tmp_path, monkeypatch)
     conn._mqtt_connected.set()

@@ -27,6 +27,8 @@
 - Локальное кэширование конфигурации при потере связи с платформой
 - Буферизация данных при потере связи с платформой
 - Ротация логов
+- Единый запуск в Docker с **`network_mode: host`** (LAN оборудования + MQTT на хосте)
+- Шаблоны deployment и общие страницы документации для проектов-наследников
 
 ## Работа с проектом
 
@@ -75,7 +77,49 @@ PRS_CONNECTOR_CONFIG=/etc/prs-connectors/modbus-line-2.json python connector.py
 - `deployment/docker/compose.example.yml`;
 - `deployment/docker/Dockerfile.example`.
 
-Подробная процедура описана в `docs/source/multi_instance_launch.rst`.
+### Запуск в Docker
+
+Рекомендуемый режим для всех коннекторов — **`network_mode: host`**
+(`--network host`): контейнер видит оборудование в LAN хоста и MQTT-платформу
+на `127.0.0.1` или по удалённому адресу без NAT и проброса портов.
+
+```bash
+# скопировать Dockerfile/compose в проект коннектора
+python -m prs_connector_core scaffold deployment
+
+mkdir -p configs state
+docker compose up -d --build
+```
+
+Контракт внутри контейнера: `PRS_CONNECTOR_CONFIG` (или `--config`), рабочий
+каталог `/state`, конфиги в `/configs:ro`.
+
+Подробности: `docs/source/multi_instance_launch.rst` и страница
+`Запуск коннектора в Docker` в Sphinx-документации.
+
+### Общая документация в дочерних коннекторах
+
+Чтобы описание Docker-запуска попало в Sphinx-доку любого коннектора на базе
+этого пакета, в `docs/source/conf.py` добавьте:
+
+```python
+extensions = [
+    # ...
+    "prs_connector_core.sphinx_shared",
+]
+```
+
+и в `index.rst` (toctree):
+
+```rst
+Запуск коннектора в Docker<_prs_connector_core/docker_launch>
+```
+
+Для README без Sphinx:
+
+```bash
+python -m prs_connector_core scaffold readme --dest README.docker.md
+```
 
 ### Версионирование
 

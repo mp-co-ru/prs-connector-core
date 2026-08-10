@@ -82,21 +82,32 @@
 расширения. Например, ``prs-connector@modbus-line-2.service`` читает
 ``/etc/prs-connectors/modbus-line-2.json``.
 
-Вариант Docker Compose
-~~~~~~~~~~~~~~~~~~~~~~
+Вариант Docker
+~~~~~~~~~~~~~~
 
-В репозитории есть примеры:
+Для Docker рекомендуется режим **сети хоста** (``network_mode: host`` /
+``--network host``): контейнер видит оборудование в LAN хоста и может
+подключаться к MQTT на ``127.0.0.1`` или к удалённой платформе.
+
+В репозитории и в установленном пакете есть примеры:
 
 * ``deployment/docker/Dockerfile.example``;
 * ``deployment/docker/compose.example.yml``.
 
-Один Docker-образ можно использовать для нескольких сервисов:
+Скопировать шаблоны в проект коннектора:
+
+.. code-block:: bash
+
+    python -m prs_connector_core scaffold deployment
+
+Краткий пример Compose:
 
 .. code-block:: yaml
 
     x-prs-connector: &prs-connector
       image: my-prs-connector:latest
       restart: unless-stopped
+      network_mode: host
       working_dir: /state
 
     services:
@@ -104,6 +115,7 @@
         <<: *prs-connector
         environment:
           PRS_CONNECTOR_CONFIG: /configs/modbus-line-1.json
+          TZ: Europe/Moscow
         volumes:
           - ./configs:/configs:ro
           - ./state/modbus-line-1:/state
@@ -112,6 +124,7 @@
         <<: *prs-connector
         environment:
           PRS_CONNECTOR_CONFIG: /configs/modbus-line-2.json
+          TZ: Europe/Moscow
         volumes:
           - ./configs:/configs:ro
           - ./state/modbus-line-2:/state
@@ -124,3 +137,7 @@
 
 Отдельный каталог ``./state/<instance>`` нужен, чтобы кэш платформенной
 конфигурации, буфер и логи каждого экземпляра хранились независимо.
+
+Полное описание запуска в Docker, обоснование ``network_mode: host`` и способ
+включить эту страницу в документацию дочернего коннектора — в разделе
+:doc:`_prs_connector_core/docker_launch`.

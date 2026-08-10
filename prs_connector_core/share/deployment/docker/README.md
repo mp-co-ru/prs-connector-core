@@ -17,7 +17,7 @@
 python -m prs_connector_core scaffold deployment
 ```
 
-или вручную:
+или вручную из git-репозитория / установленного пакета:
 
 ```bash
 cp deployment/docker/Dockerfile.example Dockerfile
@@ -66,5 +66,5 @@ docker compose up -d --build connector-modbus-line-1
 ## Документация
 
 Полное описание и способ включения страницы в Sphinx дочернего проекта —
-в пакете (`prs_connector_core.sphinx_shared`) и в
+в `docs/source` пакета (`docker_launch`) и в
 `python -m prs_connector_core scaffold docs`.

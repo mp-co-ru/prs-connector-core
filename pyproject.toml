@@ -36,10 +36,14 @@ Documentation = "https://mp-co-ru.github.io/prs-connector-core/"
 
 [tool.setuptools]
 include-package-data = true
-packages = ["prs_connector_core"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["prs_connector_core*"]
 
 [tool.setuptools_scm]
 write_to = "prs_connector_core/_version.py"
 
 [tool.setuptools.package-data]
-"prs_connector_core" = ["py.typed"]
+"prs_connector_core" = ["py.typed", "share/**/*"]
+"prs_connector_core.share" = ["docs/*", "deployment/**/*"]

@@ -25,7 +25,9 @@ extensions = [
     'sphinxcontrib.httpdomain',
     'sphinxcontrib.httpexample',
     'sphinx.ext.todo',
-    'sphinx_togglebutton'
+    'sphinx_togglebutton',
+    # Общие страницы (Docker и др.) из пакета — также для дочерних коннекторов.
+    'prs_connector_core.sphinx_shared',
 ]
 
 templates_path = ['_templates']

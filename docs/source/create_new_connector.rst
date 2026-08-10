@@ -195,3 +195,44 @@
 .. literalinclude:: prs_indux_connector.py
     :language: python
     :linenos:
+
+Docker и общая документация
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+После того как коннектор работает локально, добавьте в проект стандартный
+Docker-запуск с сетью хоста:
+
+.. code-block:: bash
+
+    python -m prs_connector_core scaffold deployment
+
+Шаблоны попадут в ``deployment/docker/``. В Compose уже задано
+``network_mode: host`` — это базовый режим для всех коннекторов на
+``prs-connector-core`` (доступ к оборудованию в LAN и к MQTT на хосте).
+
+Чтобы описание запуска в Docker **автоматически** входило в Sphinx-документацию
+вашего коннектора (и обновлялось вместе с пакетом), в ``docs/source/conf.py``
+подключите расширение:
+
+.. code-block:: python
+
+    extensions = [
+        # ...
+        "prs_connector_core.sphinx_shared",
+    ]
+
+и добавьте страницу в ``toctree`` файла ``index.rst``:
+
+.. code-block:: rst
+
+    Запуск коннектора в Docker<_prs_connector_core/docker_launch>
+
+Если у проекта нет Sphinx и есть только ``README.md``, скопируйте Markdown-фрагмент:
+
+.. code-block:: bash
+
+    python -m prs_connector_core scaffold readme --dest README.docker.md
+
+и вставьте его содержимое в README (или дайте на него ссылку).
+
+Подробности: :doc:`_prs_connector_core/docker_launch` и :doc:`multi_instance_launch`.

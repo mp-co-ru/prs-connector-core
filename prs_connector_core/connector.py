@@ -45,6 +45,8 @@ CN_Q_SOURCE_ERROR : Final[int] = 103
 # в логе один «Разрыв связи», чтение Modbus идёт, а MQTT снова не поднимается.
 MQTT_BROKER_OPERATION_TIMEOUT: Final[float] = 30.0
 CONNECTOR_CONFIG_ENV: Final[str] = "PRS_CONNECTOR_CONFIG"
+# За один проход буфера в очередь уходит не больше стольких валидных строк.
+BUFFER_FLUSH_BATCH_SIZE: Final[int] = 50
 
 
 class MqttPlatformLogHandler(logging.Handler):
@@ -112,8 +114,10 @@ class BaseConnector(ABC):
         self._buf_file_name = f"backup_{self._config_from_file.id}.dat"
         # имя временного файла буфера
         self._tmp_buf_file_name = f"backup_{self._config_from_file.id}.tmp"
-        # флаг коннекта к платформе
+        # флаг коннекта к платформе (буфер разрыва можно слать сразу после CONNECT)
         self._mqtt_connected = asyncio.Event()
+        # live data_set разрешён только после первого prsConnector.full_configuration этой MQTT-сессии
+        self._mqtt_session_ready = asyncio.Event()
 
         # Извлекаем параметры подключения
         parsed_url = urlparse(self._config_from_file.url)
@@ -216,22 +220,31 @@ class BaseConnector(ABC):
                 self._logger.debug(f"Новое сообщение с данными: {mes}.")
                 # при помещении сообщения из буфера в очередь мы помечаем его как уже обработанное
                 processed = mes.get("processed", False)
+                if (
+                    not processed
+                    and self._mqtt_connected.is_set()
+                    and not self._mqtt_session_ready.is_set()
+                ):
+                    # Live до первого full_configuration: не трогаем lastValue и не шлём data_set.
+                    continue
                 if not processed:
                     new_mes = self._process_tags_data(mes)
 
                 if new_mes["data"]:
                     if self._mqtt_connected.is_set():
-                        self._logger.info(f"Отправка данных в платформу.")
-                        await self._mqtt_client.publish( # type: ignore
-                            topic="prsTag/app_api_client/data_set/*",
-                            payload=json.dumps(new_mes),
-                            retain=True
-                        )
+                        # Буфер (processed) — сразу после CONNECT. Live — только после full_configuration.
+                        if processed or self._mqtt_session_ready.is_set():
+                            self._logger.info(f"Отправка данных в платформу.")
+                            await self._mqtt_client.publish( # type: ignore
+                                topic="prsTag/app_api_client/data_set/*",
+                                payload=json.dumps(new_mes),
+                                retain=True
+                            )
                     else:
                         await write_to_buf(new_mes)
                         self._logger.info(f"Данные сохранены в буфер.")
             except (aiomqtt.MqttError) as _:
-                self._mqtt_connected.clear()
+                self._clear_mqtt_connection()
                 if new_mes["data"]:
                     await write_to_buf(new_mes)
                     self._logger.info(f"Ошибка передачи данных: сохраняем в буфер.")
@@ -241,7 +254,7 @@ class BaseConnector(ABC):
                 self._logger.error(f"Системная ошибка в цикле отправки данных в платформу: {ex}.")
                 # OSError и др. при обрыве сокета не всегда оборачиваются в MqttError — без сброса
                 # флага run() не выходит из ожидания и коннектор не переподключается к брокеру.
-                self._mqtt_connected.clear()
+                self._clear_mqtt_connection()
                 if new_mes["data"]:
                     try:
                         await write_to_buf(new_mes)
@@ -261,39 +274,46 @@ class BaseConnector(ABC):
                     continue
 
                 buffer_has_data = False
+                flushed = 0
                 async with self._buf_file_lock:
                         stat = await aiofiles.os.stat(self._buf_file_name)
                         if stat.st_size > 0:
                             buffer_has_data = True
-                            # если размер буфера > 0
                             self._logger.info("Обработка буфера данных.")
-                            async with aiofiles.open(self._tmp_buf_file_name, mode="+a") as tmp_file:
+                            async with aiofiles.open(self._tmp_buf_file_name, mode="w") as tmp_file:
                                 queue_full = False
                                 async with aiofiles.open(self._buf_file_name) as buf_file:
                                     async for line in buf_file: # type: ignore
-                                        if queue_full or not self._mqtt_connected.is_set():
-                                            # если в процессе обработки буфера переполнилась очередь или прервалась связь с платформой,
-                                            # то все оставшиеся в буфере строки пишем во временный файл и потом
-                                            # переименовываем временный файл в файл буфера
+                                        raw = line if line.endswith("\n") else f"{line}\n"
+                                        stripped = line.strip()
+                                        if not stripped:
+                                            continue
+                                        defer = (
+                                            queue_full
+                                            or not self._mqtt_connected.is_set()
+                                            or flushed >= BUFFER_FLUSH_BATCH_SIZE
+                                        )
+                                        if defer:
                                             self._logger.debug("Запись данных обратно в буфер.")
-                                            if not line:
-                                                self._logger.debug("Пустые данные.")
-                                            await tmp_file.write(f"{line}\n")
-
-                                        else:
-                                            try:
-                                                js = json.loads(line)
-                                                js["processed"] = True
-                                                self._data_queue.put_nowait(js)
-                                                self._logger.debug("Запись данных из буфера в очередь.")
-                                            except asyncio.QueueFull as _:
-                                                if not queue_full:
-                                                    self._logger.error("Очередь сообщений переполнена.")
-                                                    queue_full = True
-                                                    await tmp_file.write(line)
+                                            await tmp_file.write(raw)
+                                            continue
+                                        try:
+                                            js = json.loads(stripped)
+                                        except json.JSONDecodeError:
+                                            continue
+                                        try:
+                                            js["processed"] = True
+                                            self._data_queue.put_nowait(js)
+                                            flushed += 1
+                                            self._logger.debug("Запись данных из буфера в очередь.")
+                                        except asyncio.QueueFull as _:
+                                            if not queue_full:
+                                                self._logger.error("Очередь сообщений переполнена.")
+                                                queue_full = True
+                                            await tmp_file.write(raw)
                             await aiofiles.os.replace(self._tmp_buf_file_name, self._buf_file_name)
 
-                if not buffer_has_data:
+                if not buffer_has_data or flushed >= BUFFER_FLUSH_BATCH_SIZE:
                     await asyncio.sleep(2)
 
             except asyncio.CancelledError:
@@ -415,14 +435,14 @@ class BaseConnector(ABC):
     async def _subscribe_client(self) -> None :
         return
 
-    def _reset_tag_cache_last_sent_values(self) -> None:
-        """Сбрасывает lastValue в кэше тегов при новой MQTT-сессии с платформой.
+    def _clear_mqtt_connection(self) -> None:
+        self._mqtt_connected.clear()
+        self._mqtt_session_ready.clear()
 
-        Процесс коннектора сохраняет lastValue в памяти. После перезапуска платформы
-        значения на источнике часто те же; при max_dev > 0 дедупликация в
-        `_process_tags_data` не добавляет точки в исходящее сообщение — в логе
-        остаётся «Новое сообщение с данными» по сырой очереди, но в платформу
-        ничего не уходит, пока значение не изменится достаточно сильно.
+    def _reset_tag_cache_last_sent_values(self) -> None:
+        """Сбрасывает lastValue, чтобы после разбора конфига ушёл полный снимок с источника.
+
+        Не вызывать на MQTT CONNECT: иначе «текущее» уйдёт с новой меткой до качества 101.
         """
         for entry in self._tag_cache.values():
             entry["lastValue"] = None
@@ -494,7 +514,9 @@ class BaseConnector(ABC):
                         # даём возможность наследникам подписаться на что-то ещё.
                         # необходимо, к примеру, для mqtt-коннектора
                         await self._subscribe_client()
-                        self._reset_tag_cache_last_sent_values()
+                        # CONNECT: буфер можно слать сразу. lastValue и live data_set — только после
+                        # первого full_configuration (платформа до ответа конфигом пишет null/101).
+                        self._mqtt_session_ready.clear()
                         self._mqtt_connected.set()
                         await asyncio.sleep(5)
                         payload = {
@@ -531,7 +553,7 @@ class BaseConnector(ABC):
                     # попадал внешний `except Exception` и переподключения прекращались навсегда
                     # (плюс не вызывался `_shutdown()`).
                     self._logger.error(f"Разрыв связи с платформой: {e}.")
-                    self._mqtt_connected.clear()
+                    self._clear_mqtt_connection()
                     self._mqtt_client = None
                     if not self._canceled:
                         try:
@@ -549,6 +571,7 @@ class BaseConnector(ABC):
             self._logger.exception(f"Неопределённое исключение вне цикла связи с платформой: {ex}.")
 
     async def _get_full_configuration_from_platform(self, mes: dict):
+        first_after_connect = not self._mqtt_session_ready.is_set()
         new_mes = {
             "data": {
                 "prsActive": mes["data"]["prsActive"],
@@ -564,10 +587,13 @@ class BaseConnector(ABC):
             }
         }
         await self._tags_add_or_changed(mes=new_mes, full_list=True)
-        # Теги без изменений в конфиге оставляют lastValue в памяти. После перезапуска
-        # платформы могла уйти одна точка до готовности приёма; дальше max_dev отсекает
-        # те же значения — в платформе пусто. Синхронизируем с состоянием после full_configuration.
-        self._reset_tag_cache_last_sent_values()
+        # Первый конфиг после CONNECT: сброс lastValue и полный опрос источника.
+        # Повторный full_configuration в той же MQTT-сессии лишний snapshot не шлёт.
+        if first_after_connect:
+            self._reset_tag_cache_last_sent_values()
+            self._mqtt_session_ready.set()
+            if self._config_from_platfrom.prsActive:
+                await self._refresh_read_tags()
 
     @classmethod
     def _hash_dict(cls, js: dict) -> bytes:
@@ -746,13 +772,13 @@ class BaseConnector(ABC):
                             await self._process_message(message)
 
             except aiomqtt.MqttError as ex:
-                self._mqtt_connected.clear()
+                self._clear_mqtt_connection()
                 self._logger.error(f"Ошибка MQTT в цикле обработки сообщений: {ex}.")
             except asyncio.CancelledError:
                 return
             except Exception as ex:
                 self._logger.error(f"Системная ошибка в цикле обработки сообщений: {ex}.")
-                self._mqtt_connected.clear()
+                self._clear_mqtt_connection()
 
     async def _command(self, message_data: dict) -> None:
         """Выполняет строки из ``command.lines`` в shell; результат уходит в платформу отдельным сообщением ``prsConnector.command_output``."""

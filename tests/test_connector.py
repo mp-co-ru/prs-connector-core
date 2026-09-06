@@ -726,6 +726,7 @@ async def test_push_data_publishes_when_connected_and_data_present(tmp_path, mon
     dummy_client = DummyMqttClient()
     cast(Any, conn)._mqtt_client = dummy_client
     conn._mqtt_connected.set()
+    conn._mqtt_session_ready.set()
     conn._canceled = False
 
     conn._process_tags_data = lambda data: {"data": [{"tagId": "t", "data": [[1, 2, 100]]}]}
@@ -779,10 +780,89 @@ async def test_process_buffer_moves_lines_to_queue_with_processed_flag(tmp_path,
 
     cast(Any, conn)._data_queue = QueueStub()
 
+    async def fast_sleep(_seconds):
+        conn._canceled = True
+
+    monkeypatch.setattr("prs_connector_core.connector.asyncio.sleep", fast_sleep)
+
     await conn._process_buffer()
 
     assert len(pushed) == 1
     assert pushed[0]["processed"] is True
+
+
+@pytest.mark.asyncio
+async def test_process_buffer_skips_corrupt_and_empty_lines(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    conn._canceled = False
+    conn._mqtt_connected.set()
+    conn._buf_file_name = str(tmp_path / "backup_test.dat")
+    conn._tmp_buf_file_name = str(tmp_path / "backup_test.tmp")
+
+    (tmp_path / "backup_test.dat").write_bytes(
+        b'{"data":[{"tagId":"a","data":[[1,2,100]]}]}\n'
+        b"\x00\x00\x00\n"
+        b"\n"
+        b"not-json\n"
+        b'{"data":[{"tagId":"b","data":[[3,4,100]]}]}\n'
+    )
+
+    pushed = []
+
+    class QueueStub:
+        def put_nowait(self, js):
+            pushed.append(js)
+            if len(pushed) >= 2:
+                conn._canceled = True
+
+    cast(Any, conn)._data_queue = QueueStub()
+
+    async def fast_sleep(_seconds):
+        if len(pushed) >= 2:
+            conn._canceled = True
+
+    monkeypatch.setattr("prs_connector_core.connector.asyncio.sleep", fast_sleep)
+
+    await conn._process_buffer()
+
+    assert [item["data"][0]["tagId"] for item in pushed] == ["a", "b"]
+    assert (tmp_path / "backup_test.dat").read_text() == ""
+
+
+@pytest.mark.asyncio
+async def test_process_buffer_drains_in_limited_batches(tmp_path, monkeypatch):
+    """Большой буфер не выплёскивается в очередь целиком за один проход."""
+    conn = _make_connector(tmp_path, monkeypatch)
+    conn._canceled = False
+    conn._mqtt_connected.set()
+    conn._buf_file_name = str(tmp_path / "backup_test.dat")
+    conn._tmp_buf_file_name = str(tmp_path / "backup_test.tmp")
+
+    lines = [
+        f'{{"data":[{{"tagId":"t{i}","data":[[1,{i},0]]}}]}}\n'
+        for i in range(120)
+    ]
+    (tmp_path / "backup_test.dat").write_text("".join(lines))
+
+    pushed = []
+
+    class QueueStub:
+        def put_nowait(self, js):
+            pushed.append(js)
+
+    cast(Any, conn)._data_queue = QueueStub()
+
+    async def stop_after_first_pause(_seconds):
+        conn._canceled = True
+
+    monkeypatch.setattr("prs_connector_core.connector.asyncio.sleep", stop_after_first_pause)
+
+    await conn._process_buffer()
+
+    assert len(pushed) == 50
+    remaining = (tmp_path / "backup_test.dat").read_text().strip().splitlines()
+    assert len(remaining) == 70
+    assert '"tagId":"t50"' in remaining[0]
 
 
 @pytest.mark.asyncio
@@ -1247,6 +1327,208 @@ async def test_full_configuration_resets_last_sent_tag_values(tmp_path, monkeypa
     }
     await conn._get_full_configuration_from_platform(mes)
     assert conn._tag_cache[tag_id]["lastValue"] is None
+    assert conn._mqtt_session_ready.is_set()
+
+
+def _full_configuration_payload(tag_id: str, *, prs_active: bool = True, max_dev: float = 10) -> dict:
+    return {
+        "data": {
+            "prsActive": prs_active,
+            "prsEntityTypeCode": 1,
+            "prsJsonConfigString": {"source": {}, "log": {"fileName": "x.log"}},
+            "tags": {
+                tag_id: {
+                    "prsActive": True,
+                    "prsValueTypeCode": 0,
+                    "prsJsonConfigString": {"maxDev": max_dev},
+                }
+            },
+        }
+    }
+
+
+@pytest.mark.asyncio
+async def test_push_data_live_not_published_before_session_ready(tmp_path, monkeypatch):
+    """После CONNECT live data_set не уходит, пока нет первого full_configuration."""
+    conn = _make_connector(tmp_path, monkeypatch)
+    tag_id = str(uuid4())
+    _register_tag(conn, tag_id, value_type=0, max_dev=10)
+    conn._tag_cache[tag_id]["lastValue"] = [1, 549, 0]
+    dummy_client = DummyMqttClient()
+    cast(Any, conn)._mqtt_client = dummy_client
+    conn._mqtt_connected.set()
+    conn._mqtt_session_ready.clear()
+    conn._canceled = False
+
+    await conn._data_queue.put({"data": [{"tagId": tag_id, "data": [[2, 549, 0]]}]})
+
+    task = asyncio.create_task(conn._push_data())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    assert dummy_client.calls == []
+    assert conn._tag_cache[tag_id]["lastValue"] == [1, 549, 0]
+
+
+@pytest.mark.asyncio
+async def test_push_data_buffer_published_before_session_ready_keeps_original_x(tmp_path, monkeypatch):
+    """Буфер разрыва можно слать сразу после CONNECT; метки x не переписываются."""
+    conn = _make_connector(tmp_path, monkeypatch)
+    dummy_client = DummyMqttClient()
+    cast(Any, conn)._mqtt_client = dummy_client
+    conn._mqtt_connected.set()
+    conn._mqtt_session_ready.clear()
+    conn._canceled = False
+
+    buffered = {
+        "processed": True,
+        "data": [{"tagId": "t", "data": [[100, 42, 0]]}],
+    }
+    await conn._data_queue.put(buffered)
+
+    task = asyncio.create_task(conn._push_data())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    assert len(dummy_client.calls) == 1
+    payload = json.loads(dummy_client.calls[0]["payload"])
+    assert payload["data"][0]["data"][0][0] == 100
+    assert payload["data"][0]["data"][0][1] == 42
+
+
+@pytest.mark.asyncio
+async def test_run_connect_does_not_reset_last_value_or_ready_session(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    conn._config_from_platfrom.prsActive = False
+    reset_calls = {"n": 0}
+
+    def spy_reset():
+        reset_calls["n"] += 1
+
+    class FakeClientCM:
+        def __init__(self):
+            self.publishes = []
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+        async def subscribe(self, topic):
+            return None
+
+        async def publish(self, topic, payload, retain):
+            self.publishes.append((topic, payload, retain))
+
+    async def fake_shutdown():
+        return None
+
+    async def fast_sleep(seconds):
+        if seconds == 3:
+            conn._canceled = True
+        return None
+
+    monkeypatch.setattr(conn, "_reset_tag_cache_last_sent_values", spy_reset)
+    monkeypatch.setattr("prs_connector_core.connector.aiomqtt.Client", lambda **kwargs: FakeClientCM())
+    monkeypatch.setattr("prs_connector_core.connector.asyncio.sleep", fast_sleep)
+    monkeypatch.setattr("prs_connector_core.connector.signal.signal", lambda *_: None)
+    monkeypatch.setattr("prs_connector_core.connector.sys.platform", "win32")
+    monkeypatch.setattr(conn, "_shutdown", fake_shutdown)
+
+    await conn.run()
+
+    assert reset_calls["n"] == 0
+    assert not conn._mqtt_session_ready.is_set()
+
+
+@pytest.mark.asyncio
+async def test_first_full_configuration_snapshots_all_tags_even_if_unchanged(tmp_path, monkeypatch):
+    """После 101 / full_configuration текущее значение уходит, даже если источник молчит."""
+    conn = _make_connector(tmp_path, monkeypatch)
+    tag_id = str(uuid4())
+    _register_tag(conn, tag_id, value_type=0, max_dev=10)
+    conn._tag_cache[tag_id]["lastValue"] = [1, 99, 0]
+    refreshed = {"n": 0}
+
+    async def noop_connector(mes):
+        return None
+
+    async def noop_tags(mes, full_list=False):
+        return None
+
+    async def spy_refresh():
+        refreshed["n"] += 1
+
+    monkeypatch.setattr(conn, "_get_connector_configuration_from_platform", noop_connector)
+    monkeypatch.setattr(conn, "_tags_add_or_changed", noop_tags)
+    monkeypatch.setattr(conn, "_refresh_read_tags", spy_refresh)
+
+    monkeypatch.setattr("prs_connector_core.connector.now_int", lambda: 5000)
+    await conn._get_full_configuration_from_platform(_full_configuration_payload(tag_id))
+
+    assert conn._tag_cache[tag_id]["lastValue"] is None
+    assert conn._mqtt_session_ready.is_set()
+    assert refreshed["n"] == 1
+
+    result = conn._process_tags_data({"data": [{"tagId": tag_id, "data": [[5000, 99, 0]]}]})
+    assert result == {"data": [{"tagId": tag_id, "data": [[5000, 99, 0]]}]}
+
+
+@pytest.mark.asyncio
+async def test_repeat_full_configuration_same_session_skips_extra_snapshot(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    tag_id = str(uuid4())
+    _register_tag(conn, tag_id, value_type=0, max_dev=10)
+    conn._mqtt_session_ready.set()
+    conn._tag_cache[tag_id]["lastValue"] = [1, 99, 0]
+    refreshed = {"n": 0}
+
+    async def noop_connector(mes):
+        return None
+
+    async def noop_tags(mes, full_list=False):
+        return None
+
+    async def spy_refresh():
+        refreshed["n"] += 1
+
+    monkeypatch.setattr(conn, "_get_connector_configuration_from_platform", noop_connector)
+    monkeypatch.setattr(conn, "_tags_add_or_changed", noop_tags)
+    monkeypatch.setattr(conn, "_refresh_read_tags", spy_refresh)
+
+    await conn._get_full_configuration_from_platform(_full_configuration_payload(tag_id))
+
+    assert conn._tag_cache[tag_id]["lastValue"] == [1, 99, 0]
+    assert refreshed["n"] == 0
+    assert conn._process_tags_data({"data": [{"tagId": tag_id, "data": [[2, 99, 0]]}]}) == {"data": []}
+
+
+@pytest.mark.asyncio
+async def test_mqtt_error_clears_session_ready(tmp_path, monkeypatch):
+    conn = _make_connector(tmp_path, monkeypatch)
+    conn._mqtt_connected.set()
+    conn._mqtt_session_ready.set()
+    conn._canceled = False
+
+    class ErrorMessages:
+        def __aiter__(self):
+            return self
+
+        async def __anext__(self):
+            raise aiomqtt.MqttError("oops")
+
+    cast(Any, conn)._mqtt_client = SimpleNamespace(messages=ErrorMessages())
+
+    task = asyncio.create_task(conn._handle_messages())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    await asyncio.gather(task, return_exceptions=True)
+
+    assert not conn._mqtt_connected.is_set()
+    assert not conn._mqtt_session_ready.is_set()
 
 
 @pytest.mark.asyncio

@@ -16,16 +16,16 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
 ]
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
     "aiomqtt==2.3.2",
     "jsonata-python==0.5.3",
     "colorlog==6.9.0",
     "python-json-logger==3.3.0",
-    "pydantic==2.11.3",
-    "pydantic_core==2.33.1",
+    "pydantic==2.12.5",
+    "pydantic_core==2.41.5",
     "aiofiles==24.1.0",
-    "ciso8601==2.3.2",
+    "ciso8601==2.3.3",
     "python-dateutil==2.9.0.post0"
 ]
 

@@ -1,5 +1,5 @@
 [![Лицензия Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-green.svg)
+![Python 3.14](https://img.shields.io/badge/Python-3.14-green.svg)
 [![Coverage Status](https://coveralls.io/repos/github/mp-co-ru/prs-connector-core/badge.svg?branch=dev)](https://coveralls.io/github/mp-co-ru/prs-connector-core?branch=dev)
 [![PyPI](https://img.shields.io/pypi/v/prs-connector-core.svg)](https://www.pypi.org/project/prs-connector-core)
 
@@ -33,13 +33,12 @@
 ## Работа с проектом
 
 > [!WARNING]
-> Работа тестировалась на операционной системе Ubuntu.
+> Обязателен Python 3.14. На Ubuntu 26.04 он установлен как системный.
 
 ### Требования
-- Python 3.12 или новее
+- Python 3.14
 - pip 21.3+
-- pipenv
-- pyenv
+- pipenv и pyenv — для разработки
 
 ### Работа над исходным кодом
 

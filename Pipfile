@@ -4,14 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pydantic = "2.11.3"
-pydantic_core = "2.33.1"
+pydantic = "2.12.5"
+pydantic_core = "2.41.5"
 jsonata-python = "0.5.3"
 aiomqtt = "2.3.2"
 prs-connector-core = {file = ".", editable = true}
 python-dateutil = "2.9.0.post0"
 aiofiles = "24.1.0"
-ciso8601 = "2.3.2"
+ciso8601 = "2.3.3"
 
 [dev-packages]
 pytest = "9.0.1"
@@ -32,5 +32,4 @@ twine = "6.2.0"
 packaging = "25.0"
 
 [requires]
-python_version = "3.12"
-python_full_version = "3.12.3"
+python_version = "3.14"

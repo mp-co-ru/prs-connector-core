@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.12  # Укажите версию Python, используемую в проекте
+          python-version: "3.14"
 
       # Шаг 3: Установка зависимостей
       - name: Install dependencies
